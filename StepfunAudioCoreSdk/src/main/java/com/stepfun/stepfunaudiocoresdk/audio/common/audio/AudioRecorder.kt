@@ -63,7 +63,7 @@ class AudioRecorder(private val context: Context) {
         callback: RecordingCallback
     ): Boolean {
         if (isRecording) {
-            "录制已在进行中".logW(TAG, "录制已在进行中")
+            "录制已在进行中".logW(TAG)
             return false
         }
         this.callback = callback
@@ -75,13 +75,13 @@ class AudioRecorder(private val context: Context) {
 
             isRecording = true
             startTime = System.currentTimeMillis()
-            "开始录制: ${this.outputFile?.absolutePath}".logD(TAG, "开始录制: ${this.outputFile?.absolutePath}")
+            "开始录制: ${this.outputFile?.absolutePath}".logD(TAG)
             callback.onStart()
 
             true
         } catch (e: Exception) {
             val errorMsg = "开始录制失败: ${e.message}"
-            errorMsg.logE(TAG, errorMsg)
+            errorMsg.logE(TAG)
             cleanup()
             callback.onError(errorMsg)
             false
@@ -95,7 +95,7 @@ class AudioRecorder(private val context: Context) {
      */
     fun stopRecording(): File? {
         if (!isRecording) {
-            "当前未在录制".logW(TAG, "当前未在录制")
+            "当前未在录制".logW(TAG)
             return null
         }
 
@@ -110,7 +110,7 @@ class AudioRecorder(private val context: Context) {
 
             isRecording = false
 
-            "录制已停止，时长: ${duration}ms，文件: ${file?.absolutePath}".logD(TAG, "录制已停止，时长: ${duration}ms，文件: ${file?.absolutePath}")
+            "录制已停止，时长: ${duration}ms，文件: ${file?.absolutePath}".logD(TAG)
 
             if (file != null && file.exists()) {
                 callback?.onComplete(file, duration)
@@ -121,7 +121,7 @@ class AudioRecorder(private val context: Context) {
             }
         } catch (e: RuntimeException) {
             val errorMsg = "停止录制失败: ${e.message}"
-            errorMsg.logE(TAG, errorMsg)
+            errorMsg.logE(TAG)
             callback?.onError(errorMsg)
             null
         } finally {
@@ -134,7 +134,7 @@ class AudioRecorder(private val context: Context) {
      */
     fun cancelRecording() {
         if (!isRecording) {
-            "当前未在录制".logW(TAG, "当前未在录制")
+            "当前未在录制".logW(TAG)
             return
         }
 
@@ -148,15 +148,15 @@ class AudioRecorder(private val context: Context) {
             outputFile?.let {
                 if (it.exists()) {
                     it.delete()
-                    "录制文件已删除: ${it.absolutePath}".logD(TAG, "录制文件已删除: ${it.absolutePath}")
+                    "录制文件已删除: ${it.absolutePath}".logD(TAG)
                 }
             }
 
             isRecording = false
 
-            "录制已取消".logD(TAG, "录制已取消")
+            "录制已取消".logD(TAG)
         } catch (e: Exception) {
-            "取消录制失败: ${e.message}".logE(TAG, "取消录制失败: ${e.message}")
+            "取消录制失败: ${e.message}".logE(TAG)
         } finally {
             cleanup()
         }
@@ -198,7 +198,7 @@ class AudioRecorder(private val context: Context) {
         }
         cleanup()
         callback = null
-        "录制器已释放".logD(TAG, "录制器已释放")
+        "录制器已释放".logD(TAG)
     }
 
     private fun createTempAudioFile(extension: String): File {
@@ -252,7 +252,7 @@ class AudioRecorder(private val context: Context) {
             // 设置错误监听器
             setOnErrorListener { _, what, extra ->
                 val errorMsg = "录制错误: what=$what, extra=$extra"
-                errorMsg.logE(TAG, errorMsg)
+                errorMsg.logE(TAG)
                 callback?.onError(errorMsg)
             }
 
@@ -268,7 +268,7 @@ class AudioRecorder(private val context: Context) {
             mediaRecorder?.release()
             mediaRecorder = null
         } catch (e: Exception) {
-            "释放录制器失败: ${e.message}".logE(TAG, "释放录制器失败: ${e.message}")
+            "释放录制器失败: ${e.message}".logE(TAG)
         }
     }
 }
