@@ -56,9 +56,9 @@ class AudioPlayer(private val context: Context) {
 
     /**
      * 从字节数组播放音频
-     * 
+     *
      * 此方法内部自动在后台线程处理 IO 操作，无需在协程中调用
-     * 
+     *
      * @param audioData 音频数据
      * @param fileExtension 文件扩展名（如 "mp3", "wav"）
      * @param callback 播放回调
@@ -90,7 +90,7 @@ class AudioPlayer(private val context: Context) {
                 playFromFile(tempFile.absolutePath)
 
             } catch (e: Exception) {
-                "播放失败: ${e.message}".logE(TAG, "播放失败: ${e.message}")
+                "播放失败: ${e.message}".logE(TAG)
                 callback?.onError("播放失败: ${e.message}", e)
             }
         }.start()
@@ -115,18 +115,18 @@ class AudioPlayer(private val context: Context) {
                 )
 
                 setOnPreparedListener {
-                    "播放器准备完成".logD(TAG, "播放器准备完成")
+                    "播放器准备完成".logD(TAG)
                     callback?.onPrepared()
                 }
 
                 setOnCompletionListener {
-                    "播放完成".logD(TAG, "播放完成")
+                    "播放完成".logD(TAG)
                     callback?.onCompletion()
                     cleanup()
                 }
 
                 setOnErrorListener { mp, what, extra ->
-                    "播放器错误: what=$what, extra=$extra".logE(TAG, "播放器错误: what=$what, extra=$extra")
+                    "播放器错误: what=$what, extra=$extra".logE(TAG)
                     callback?.onError("播放器错误: what=$what, extra=$extra", null)
                     cleanup()
                     true
@@ -137,14 +137,14 @@ class AudioPlayer(private val context: Context) {
                 start()
 
                 callback?.onStart()
-                "开始播放: $filePath".logD(TAG, "开始播放: $filePath")
+                "开始播放: $filePath".logD(TAG)
             }
 
         } catch (e: IOException) {
-            "播放文件失败: ${e.message}".logE(TAG, "播放文件失败: ${e.message}")
+            "播放文件失败: ${e.message}".logE(TAG)
             callback?.onError("播放文件失败: ${e.message}", e)
         } catch (e: IllegalStateException) {
-            "播放器状态异常: ${e.message}".logE(TAG, "播放器状态异常: ${e.message}")
+            "播放器状态异常: ${e.message}".logE(TAG)
             callback?.onError("播放器状态异常: ${e.message}", e)
         }
     }
@@ -157,11 +157,11 @@ class AudioPlayer(private val context: Context) {
             mediaPlayer?.let {
                 if (it.isPlaying) {
                     it.pause()
-                    "播放已暂停".logD(TAG, "播放已暂停")
+                    "播放已暂停".logD(TAG)
                 }
             }
         } catch (e: IllegalStateException) {
-            "暂停失败: ${e.message}".logE(TAG, "暂停失败: ${e.message}")
+            "暂停失败: ${e.message}".logE(TAG)
         }
     }
 
@@ -173,11 +173,11 @@ class AudioPlayer(private val context: Context) {
             mediaPlayer?.let {
                 if (!it.isPlaying) {
                     it.start()
-                    "播放已恢复".logD(TAG, "播放已恢复")
+                    "播放已恢复".logD(TAG)
                 }
             }
         } catch (e: IllegalStateException) {
-            "恢复播放失败: ${e.message}".logE(TAG, "恢复播放失败: ${e.message}")
+            "恢复播放失败: ${e.message}".logE(TAG)
         }
     }
 
@@ -189,12 +189,12 @@ class AudioPlayer(private val context: Context) {
             mediaPlayer?.let {
                 if (it.isPlaying) {
                     it.stop()
-                    "播放已停止".logD(TAG, "播放已停止")
+                    "播放已停止".logD(TAG)
                 }
             }
             cleanup()
         } catch (e: IllegalStateException) {
-            "停止失败: ${e.message}".logE(TAG, "停止失败: ${e.message}")
+            "停止失败: ${e.message}".logE(TAG)
         }
     }
 
@@ -206,7 +206,7 @@ class AudioPlayer(private val context: Context) {
         try {
             mediaPlayer?.seekTo(position)
         } catch (e: IllegalStateException) {
-            "跳转失败: ${e.message}".logE(TAG, "跳转失败: ${e.message}")
+            "跳转失败: ${e.message}".logE(TAG)
         }
     }
 
@@ -254,7 +254,7 @@ class AudioPlayer(private val context: Context) {
         try {
             mediaPlayer?.setVolume(leftVolume, rightVolume)
         } catch (e: IllegalStateException) {
-            "设置音量失败: ${e.message}".logE(TAG, "设置音量失败: ${e.message}")
+            "设置音量失败: ${e.message}".logE(TAG)
         }
     }
 
@@ -266,7 +266,7 @@ class AudioPlayer(private val context: Context) {
         try {
             mediaPlayer?.isLooping = looping
         } catch (e: IllegalStateException) {
-            "设置循环失败: ${e.message}".logE(TAG, "设置循环失败: ${e.message}")
+            "设置循环失败: ${e.message}".logE(TAG)
         }
     }
 
@@ -276,7 +276,7 @@ class AudioPlayer(private val context: Context) {
     fun release() {
         cleanup()
         callback = null
-        "播放器已释放".logD(TAG, "播放器已释放")
+        "播放器已释放".logD(TAG)
     }
 
     /**
@@ -301,7 +301,7 @@ class AudioPlayer(private val context: Context) {
             }
             mediaPlayer = null
         } catch (e: Exception) {
-            "释放播放器失败: ${e.message}".logE(TAG, "释放播放器失败: ${e.message}")
+            "释放播放器失败: ${e.message}".logE(TAG)
         }
     }
 
@@ -313,12 +313,12 @@ class AudioPlayer(private val context: Context) {
             currentTempFile?.let {
                 if (it.exists()) {
                     it.delete()
-                    "临时文件已删除: ${it.absolutePath}".logD(TAG, "临时文件已删除: ${it.absolutePath}")
+                    "临时文件已删除: ${it.absolutePath}".logD(TAG)
                 }
             }
             currentTempFile = null
         } catch (e: Exception) {
-            "删除临时文件失败: ${e.message}".logE(TAG, "删除临时文件失败: ${e.message}")
+            "删除临时文件失败: ${e.message}".logE(TAG)
         }
     }
 }
@@ -326,17 +326,17 @@ class AudioPlayer(private val context: Context) {
 /**
  * 音频播放器管理器（单例）
  * 提供全局的音频播放器实例
- * 
+ *
  * 注意：
  * 1. 单例播放器会在应用进程结束时自动被系统回收，通常不需要手动释放
  * 2. 如需在低内存时释放资源，可在 Application.onLowMemory() 或 onTrimMemory() 中调用 release()
  * 3. Activity 中使用的 AudioPlayer 实例应该在 onDestroy() 中手动释放
  */
 object AudioPlayerManager {
-    
+
     @Volatile
     private var instance: AudioPlayer? = null
-    
+
     /**
      * 获取音频播放器实例
      * @param context 上下文
@@ -348,10 +348,10 @@ object AudioPlayerManager {
             }
         }
     }
-    
+
     /**
      * 释放全局播放器
-     * 
+     *
      * 使用场景：
      * - 在 Application.onLowMemory() 中调用以释放内存
      * - 在 Application.onTrimMemory() 中根据内存级别调用
@@ -363,14 +363,14 @@ object AudioPlayerManager {
             instance = null
         }
     }
-    
+
     /**
      * 检查播放器是否已初始化
      */
     fun isInitialized(): Boolean {
         return instance != null
     }
-    
+
     /**
      * 停止播放但不释放播放器
      * 适用于需要暂时停止播放但后续可能继续使用的场景
