@@ -2,7 +2,7 @@ package com.stepfun.stepfunaudiottssdk.tts
 
 import com.stepfun.stepfunaudiocoresdk.audio.common.network.NetworkManager
 import com.stepfun.stepfunaudiocoresdk.audio.common.network.State
-import com.stepfun.stepfunaudiottssdk.tts.configs.TtsSpeechParams
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -10,7 +10,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import stepai.android.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiottssdk.tts.configs.TtsSpeechParams
 import java.io.File
 import java.io.FileOutputStream
 

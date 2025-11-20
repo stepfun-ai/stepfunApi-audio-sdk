@@ -1,7 +1,7 @@
 package com.stepfun.stepfunaudioasrsdk.asr
 
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.AsrResponseFormat
-import stepai.android.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
 import java.io.File
 
 object Asr {

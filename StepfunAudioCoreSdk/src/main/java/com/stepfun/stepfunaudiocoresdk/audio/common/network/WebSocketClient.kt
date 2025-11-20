@@ -9,7 +9,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okhttp3.logging.HttpLoggingInterceptor
-import stepai.android.audio.core.SpeechConfig
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechConfig
 import java.util.concurrent.TimeUnit
 
 /**

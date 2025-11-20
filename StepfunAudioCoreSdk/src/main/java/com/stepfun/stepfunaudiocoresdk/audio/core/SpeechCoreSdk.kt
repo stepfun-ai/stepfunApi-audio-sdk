@@ -1,7 +1,6 @@
-package stepai.android.audio.core
+package com.stepfun.stepfunaudiocoresdk.audio.core
 
 import android.content.Context
-import stepai.android.audio.common.logger.LoggerManager
 import com.stepfun.stepfunaudiocoresdk.audio.common.network.HttpClient
 import com.stepfun.stepfunaudiocoresdk.audio.common.network.WebSocketClient
 
@@ -13,10 +12,9 @@ object SpeechCoreSdk {
         if (isInitialized) {
             return
         }
-        LoggerManager.setEnableLogger(config.enableLogging)
         HttpClient.init(context, config)
         WebSocketClient.init(context, config)
-        this.speechConfig = config
+        speechConfig = config
         isInitialized = true
     }
 
@@ -28,7 +26,7 @@ object SpeechCoreSdk {
         if (isInitialized.not()) {
             throw IllegalStateException("SpeechSdk not initialized. Call init() first.")
         }
-        this.speechConfig = config
+        speechConfig = config
     }
 
     fun getConfig(): SpeechConfig {

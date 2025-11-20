@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import stepai.android.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
 
 class TtsStreamClient {
     companion object {

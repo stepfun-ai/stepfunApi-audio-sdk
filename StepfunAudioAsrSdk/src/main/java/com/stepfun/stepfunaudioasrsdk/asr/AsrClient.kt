@@ -13,7 +13,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import stepai.android.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
 
 class AsrClient {
 

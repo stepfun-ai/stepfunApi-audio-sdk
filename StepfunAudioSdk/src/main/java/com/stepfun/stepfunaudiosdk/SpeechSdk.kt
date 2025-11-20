@@ -11,13 +11,13 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
 import com.stepfun.stepfunaudiottssdk.tts.Tts
 import com.stepfun.stepfunaudiottssdk.tts.TtsCallback
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamCallback
-import com.stepfun.stepfunaudiottssdk.tts.configs.TtsSpeechParams
 import com.stepfun.stepfunaudiottssdk.tts.configs.TtsStreamParams
 import stepai.android.audio.common.audio.AudioRecordFormat
 import stepai.android.audio.common.audio.AudioRecorder
 import stepai.android.audio.common.audio.RecordingCallback
-import stepai.android.audio.core.SpeechConfig
-import stepai.android.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechConfig
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiottssdk.tts.configs.TtsSpeechParams
 import java.io.File
 
 // Kotlin 源文件：speech_sdk

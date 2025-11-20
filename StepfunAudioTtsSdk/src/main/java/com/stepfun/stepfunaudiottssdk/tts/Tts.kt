@@ -6,9 +6,9 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioStreamPlayer
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamCallback
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamError
-import com.stepfun.stepfunaudiottssdk.tts.configs.TtsSpeechParams
 import com.stepfun.stepfunaudiottssdk.tts.configs.TtsStreamParams
-import stepai.android.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
+import com.stepfun.stepfunaudiottssdk.tts.configs.TtsSpeechParams
 import java.io.File
 
 object Tts {

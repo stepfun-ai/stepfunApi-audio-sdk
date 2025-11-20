@@ -1,12 +1,12 @@
-package stepfun.android.tts.configs
+package com.stepfun.stepfunaudiottssdk.tts.configs
 
 import com.google.gson.annotations.SerializedName
-import stepai.android.audio.common.config.PronunciationMap
-import stepai.android.audio.common.config.TtsAudioFormat
-import stepai.android.audio.common.config.TtsModel
-import stepai.android.audio.common.config.TtsVoice
-import stepai.android.audio.common.config.VoiceLabel
-import stepai.android.net.network.BaseRequest
+import com.stepfun.stepfunaudiocoresdk.audio.common.config.PronunciationMap
+import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsAudioFormat
+import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsModel
+import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
+import com.stepfun.stepfunaudiocoresdk.audio.common.config.VoiceLabel
+import com.stepfun.stepfunaudiocoresdk.audio.common.network.BaseRequest
 
 data class TtsSpeechParams(
     // 必须参数

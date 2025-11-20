@@ -1,5 +1,4 @@
-// audio-sdk-core/src/main/java/stepai/android/audio/core/SpeechConfig.kt
-package stepai.android.audio.core
+package com.stepfun.stepfunaudiocoresdk.audio.core
 
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.AsrConfig
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsConfig
