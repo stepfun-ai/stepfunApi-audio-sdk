@@ -34,7 +34,6 @@ import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
 class TtsStreamClient {
     companion object {
         private const val TAG = COMMON_TAG + "TtsStreamClient"
-        private const val WS_URL = "wss://api.stepfun.com/v1/realtime/audio"
         private const val IDLE_TIMEOUT = 60L // 60秒
     }
 
@@ -65,9 +64,11 @@ class TtsStreamClient {
         // 重置状态标记
         isAudioDoneReceived = false
         isDoneEventSent = false
-        
+
         this.callback = callback
-        val url = "$WS_URL?model=${params.model.modelId}"
+        val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
+        val url = "$wsUrl?model=${params.model.modelId}"
+        "Connecting to WebSocket URL: $url".logD(TAG)
 
         webSocket = WebSocketClient.newWebSocket(url, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
@@ -82,10 +83,12 @@ class TtsStreamClient {
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 super.onFailure(webSocket, t, response)
-                
+
+                "WebSocket 连接失败，异常: ${t.message}, response :${response?.toString()}".logD(TAG)
+
                 // 判断是否是正常的空闲超时断开
                 val isIdleTimeout = isIdleTimeoutDisconnection(t, response)
-                
+
                 if (isIdleTimeout) {
                     // 60秒空闲超时，这是正常行为
                     "WebSocket 空闲超时断开（60秒无活动），这是正常行为".logD(TAG)
@@ -141,8 +144,10 @@ class TtsStreamClient {
                         val event = gson.fromJson(message, TtsResponseCreatedEvent::class.java)
                         callback?.onSessionCreated(event.data.sessionId)
                     }
+
                     "tts.response.sentence.start" -> {
-                        val event = gson.fromJson(message, TtsResponseSentenceStartEvent::class.java)
+                        val event =
+                            gson.fromJson(message, TtsResponseSentenceStartEvent::class.java)
                         callback?.onSentenceStart(event.data.text)
                     }
 
@@ -152,10 +157,12 @@ class TtsStreamClient {
                         val isFinished = event.data.status == "finished"
                         callback?.onAudioData(audioData, isFinished)
                     }
+
                     "tts.response.sentence.end" -> {
                         val event = gson.fromJson(message, TtsResponseSentenceEndEvent::class.java)
                         callback?.onSentenceEnd(event.data.text)
                     }
+
                     "tts.text.flushed" -> {
                         callback?.onFlushed()
                     }
@@ -170,10 +177,10 @@ class TtsStreamClient {
                         val event = gson.fromJson(message, TtsResponseErrorEvent::class.java)
                         callback?.onError(
                             TtsStreamError(
-                            event.data.code.toInt(),
-                            event.data.message,
-                            event.data.details
-                        )
+                                event.data.code.toInt(),
+                                event.data.message,
+                                event.data.details
+                            )
                         )
                         close()
                     }
@@ -251,7 +258,7 @@ class TtsStreamClient {
 
     /**
      * 判断是否是空闲超时断开
-     * 
+     *
      * 根据 API 文档：如果连续 60 秒无动作，系统会自动断开连接
      * 这种情况下应该视为正常完成，而不是错误
      */
@@ -260,27 +267,27 @@ class TtsStreamClient {
         if (isAudioDoneReceived) {
             return true
         }
-        
+
         // 2. 如果已经发送了 done 事件，后续断开也是正常的
         if (isDoneEventSent) {
             return true
         }
-        
+
         // 3. 检查异常类型，判断是否是超时或正常 EOF
         val exceptionClassName = t.javaClass.simpleName
         val isTimeoutException = exceptionClassName.contains("Timeout", ignoreCase = true) ||
-                                 exceptionClassName.contains("EOF", ignoreCase = true) ||
-                                 exceptionClassName.contains("SocketException", ignoreCase = true)
-        
+                exceptionClassName.contains("EOF", ignoreCase = true) ||
+                exceptionClassName.contains("SocketException", ignoreCase = true)
+
         // 4. 如果异常消息为空或包含 "Socket closed"，通常是正常关闭
         val message = t.message ?: ""
-        val isNormalClosure = message.isEmpty() || 
-                             message.contains("Socket closed", ignoreCase = true) ||
-                             message.contains("Connection closed", ignoreCase = true)
-        
+        val isNormalClosure = message.isEmpty() ||
+                message.contains("Socket closed", ignoreCase = true) ||
+                message.contains("Connection closed", ignoreCase = true)
+
         return isTimeoutException || isNormalClosure
     }
-    
+
     /**
      * 关闭连接
      */

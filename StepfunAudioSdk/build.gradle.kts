@@ -41,6 +41,6 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    implementation(project(":StepfunAudioAsrSdk"))
-    implementation(project(":StepfunAudioTtsSdk"))
+    api(project(":StepfunAudioAsrSdk"))
+    api(project(":StepfunAudioTtsSdk"))
 }

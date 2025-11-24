@@ -26,17 +26,18 @@ object WebSocketClient {
     private const val PING_INTERVAL = 30L
 
     private var okHttpClient: OkHttpClient? = null
-    private lateinit var apiKey: String
+//    private lateinit var apiKey: String
 
     /**
      * 初始化 WebSocket 客户端
      * 通常在 SpeechCoreSdk.init() 中调用
      */
     fun init(context: Context, config: SpeechConfig) {
-        apiKey = config.apiKey
+//        apiKey = config.apiKey
 
         if (okHttpClient == null) {
-            okHttpClient = buildWebSocketClient(context, config.apiKey)
+//            okHttpClient = buildWebSocketClient(context, config.apiKey)
+            okHttpClient = buildWebSocketClient(context)
         }
     }
 
@@ -80,7 +81,8 @@ object WebSocketClient {
      * 构建 WebSocket OkHttpClient
      * 配置超时、拦截器、心跳等
      */
-    private fun buildWebSocketClient(context: Context, apiKey: String): OkHttpClient {
+//    private fun buildWebSocketClient(context: Context, apiKey: String): OkHttpClient {
+    private fun buildWebSocketClient(context: Context): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(DEFAULT_CONNECT_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(DEFAULT_READ_TIMEOUT, TimeUnit.SECONDS)
@@ -101,14 +103,14 @@ object WebSocketClient {
                 chain.proceed(chain.request())
             }
             // 认证拦截器 - 添加 Authorization header
-            .addInterceptor { chain ->
-                val original = chain.request()
-                val request = original.newBuilder()
-                    .header("Authorization", "Bearer $apiKey")
-                    .method(original.method, original.body)
-                    .build()
-                chain.proceed(request)
-            }
+//            .addInterceptor { chain ->
+//                val original = chain.request()
+//                val request = original.newBuilder()
+//                    .header("Authorization", "Bearer $apiKey")
+//                    .method(original.method, original.body)
+//                    .build()
+//                chain.proceed(request)
+//            }
             // 日志拦截器
             .addInterceptor(buildLoggingInterceptor())
             .build()

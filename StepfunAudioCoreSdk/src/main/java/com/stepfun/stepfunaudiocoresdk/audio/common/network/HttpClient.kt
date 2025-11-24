@@ -23,13 +23,15 @@ internal object HttpClient {
         if (NetworkManager.isInitialized().not()) {
             NetworkManager.init(
                 context,
-                config.baseUrl,
-                getSpeechSdkOkhttpClient(context, config.apiKey)
+                config.httpBaseUrl,
+//                getSpeechSdkOkhttpClient(context, config.apiKey)
+                getSpeechSdkOkhttpClient(context)
             )
         }
     }
 
-    private fun getSpeechSdkOkhttpClient(context: Context, apiKey: String): OkHttpClient {
+//    private fun getSpeechSdkOkhttpClient(context: Context, apiKey: String): OkHttpClient {
+    private fun getSpeechSdkOkhttpClient(context: Context): OkHttpClient {
         val client = OkHttpClient.Builder()
             .connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
@@ -46,7 +48,8 @@ internal object HttpClient {
                         .build()
                 }
                 chain.proceed(chain.request())
-            }.addInterceptor { chain ->
+            }
+            /*.addInterceptor { chain ->
                 val original = chain.request()
                 val request = original.newBuilder()
                     .header("Authorization", "Bearer $apiKey")
@@ -54,7 +57,8 @@ internal object HttpClient {
                     .method(original.method, original.body)
                     .build()
                 chain.proceed(request)
-            }.addInterceptor(getHttpLoggingInterceptor())
+            }*/
+            .addInterceptor(getHttpLoggingInterceptor())
             .build()
         return client
     }

@@ -5,11 +5,12 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsConfig
 
 data class SpeechConfig(
     // 基础配置
-    val apiKey: String = "",
+//    val apiKey: String = "",
 
     // 环境配置
     val environment: Environment = Environment.PRODUCTION,
-    val baseUrl: String = "https://api.stepfun.com/",  // 默认服务地址
+    val httpBaseUrl: String = "",
+    val webSocketUrl: String = "",
 
     // 日志配置
     val enableFileLog: Boolean = false,
@@ -26,9 +27,11 @@ data class SpeechConfig(
     val asrConfig: AsrConfig = AsrConfig(),
 ) {
     class Builder {
-        private var apiKey: String = ""
+        //        private var apiKey: String = ""
         private var apiSecret: String = ""
         private var appId: String = ""
+        private var httpBaseUel: String = ""
+        private var webSocketUrl: String = ""
         private var environment: Environment = Environment.PRODUCTION
         private var enableFileLog: Boolean = false
         private var enableLogging: Boolean = false
@@ -38,11 +41,24 @@ data class SpeechConfig(
         private var ttsConfig: TtsConfig = TtsConfig()
         private var asrConfig: AsrConfig = AsrConfig()
 
-        fun apiKey(key: String) = apply {
-            require(key.isNotEmpty()) {
-                "API Key cannot be empty"
+//        fun apiKey(key: String) = apply {
+//            require(key.isNotEmpty()) {
+//                "API Key cannot be empty"
+//            }
+//            this.apiKey = key
+//        }
+
+        fun httpBaseUrl(url: String) = apply {
+            require(url.isNotEmpty()) {
+                "http Url cannot be empty"
             }
-            this.apiKey = key
+            this.httpBaseUel = url
+        }
+        fun webSocketUrl(url: String) = apply {
+            require(url.isNotEmpty()) {
+                "websocket Url cannot be empty"
+            }
+            this.webSocketUrl = url
         }
 
         fun environment(env: Environment) = apply { this.environment = env }
@@ -51,7 +67,9 @@ data class SpeechConfig(
         fun asrConfig(config: AsrConfig) = apply { this.asrConfig = config }
 
         fun build() = SpeechConfig(
-            apiKey = apiKey,
+//            apiKey = apiKey,
+            httpBaseUrl = httpBaseUel,
+            webSocketUrl = webSocketUrl,
             environment = environment,
             enableFileLog = enableFileLog,
             enableLogging = enableLogging,

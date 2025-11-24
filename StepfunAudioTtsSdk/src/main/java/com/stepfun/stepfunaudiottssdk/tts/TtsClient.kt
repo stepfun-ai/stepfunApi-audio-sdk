@@ -17,7 +17,7 @@ import java.io.FileOutputStream
 class TtsClient {
 
     companion object {
-        private const val TTS_URL = "https://api.stepfun.com/v1/audio/speech"
+        private const val GUOTAI_URL = "openapi/v1/audio/speech"
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -38,7 +38,7 @@ class TtsClient {
 
         scope.launch {
             try {
-                val result = NetworkManager.postForBinary(TTS_URL, params.toNetworkRequest(), 2)
+                val result = NetworkManager.postForBinary(GUOTAI_URL, params.toNetworkRequest(), 2)
 
                 when {
                     result.isSuccess -> {
@@ -93,7 +93,7 @@ class TtsClient {
     suspend fun generateSpeechAsync(params: TtsSpeechParams): ByteArray {
         return withContext(Dispatchers.IO) {
             val result = NetworkManager.postForBinary(
-                url = TTS_URL,
+                url = GUOTAI_URL,
                 request = params.toNetworkRequest(),
                 retryTimes = 3
             )

@@ -41,13 +41,12 @@ object NetworkManager {
 
     private lateinit var baseUrl: String //自定义的baseurl
 
-    private const val HTTP_PROTOCOL = "https://"
 
     private const val DELAY_TIME = 1000L
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(HTTP_PROTOCOL + baseUrl)
+            .baseUrl(baseUrl)
             .client(httpClient) // 添加 OkHttp 客户端
             .addConverterFactory(GsonConverterFactory.create())
             .build()
