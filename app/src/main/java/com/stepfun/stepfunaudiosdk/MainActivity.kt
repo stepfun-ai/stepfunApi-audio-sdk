@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity() {
         SpeechSdk.TTS.quickPlay(
             context = this,
             text = text,
-            voice = TtsVoice.STEP_TTS_MINI_DEFAULT,
+            voice = TtsVoice.STEP_TTS_MINI_WENROUNANSHENG,
             callback = object : TtsCallback {
                 override fun onSuccess(audioData: ByteArray) {
                     runOnUiThread {
@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         // 1. 创建流式会话
         SpeechSdk.TTS.createStreamSession(
             context = this,
-            voice = TtsVoice.STEP_TTS_MINI_WENROUNANSHENG,
+            voice = TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG,
             callback = object : TtsStreamCallback {
                 override fun onConnectionEstablished(sessionId: String) {
                    runOnUiThread {

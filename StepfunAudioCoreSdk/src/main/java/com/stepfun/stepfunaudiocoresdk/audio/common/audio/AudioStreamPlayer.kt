@@ -17,6 +17,9 @@ import kotlinx.coroutines.*
 class AudioStreamPlayer(private val context: Context) {
     companion object {
         private const val TAG = COMMON_TAG + "AudioStreamPlayer"
+        
+        // 数据累积策略：最小累积大小（32KB）
+        private const val MIN_CHUNK_SIZE = 32 * 1024
     }
 
     private var audioTrack: AudioTrack? = null
@@ -33,6 +36,18 @@ class AudioStreamPlayer(private val context: Context) {
     private var chunkPlayJob: Job? = null
     private var chunkCounter = 0
 
+    // 方案2: 数据累积策略
+    private val accumulatedData = mutableListOf<ByteArray>()
+    private var accumulatedSize = 0
+    private val accumulateLock = Object()
+
+    // 方案1: 双缓冲播放器
+    private var currentPlayer: MediaPlayer? = null
+    private var nextPlayer: MediaPlayer? = null
+    private var currentTempFile: File? = null
+    private var nextTempFile: File? = null
+    private var isNextPlayerReady = false
+
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     /**
@@ -42,11 +57,17 @@ class AudioStreamPlayer(private val context: Context) {
      * @param format 音频格式（pcm/mp3/wav/flac/opus）
      */
     fun initialize(
-            sampleRate: Int = TtsSampleRate.RATE_24000.rate,
-            format: TtsAudioFormat = TtsAudioFormat.PCM
+        sampleRate: Int = TtsSampleRate.RATE_24000.rate,
+        format: TtsAudioFormat = TtsAudioFormat.PCM
     ) {
         this.sampleRate = sampleRate
         this.audioFormat = format
+
+        // 重置累积数据
+        synchronized(accumulateLock) {
+            accumulatedData.clear()
+            accumulatedSize = 0
+        }
 
         when (this.audioFormat) {
             TtsAudioFormat.PCM -> initPcmPlayer()
@@ -60,23 +81,23 @@ class AudioStreamPlayer(private val context: Context) {
         val bufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatEncoding)
 
         audioTrack =
-                AudioTrack.Builder()
-                        .setAudioAttributes(
-                                AudioAttributes.Builder()
-                                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                        .build()
-                        )
-                        .setAudioFormat(
-                                AudioFormat.Builder()
-                                        .setSampleRate(sampleRate)
-                                        .setChannelMask(channelConfig)
-                                        .setEncoding(audioFormatEncoding)
-                                        .build()
-                        )
-                        .setBufferSizeInBytes(bufferSize)
-                        .setTransferMode(AudioTrack.MODE_STREAM)
+            AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(channelConfig)
+                        .setEncoding(audioFormatEncoding)
+                        .build()
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
         "PCM player initialized with buffer size: $bufferSize".logD(TAG)
     }
 
@@ -87,13 +108,12 @@ class AudioStreamPlayer(private val context: Context) {
 
     /** 添加音频数据到队列 */
     fun addAudioData(data: ByteArray) {
-
         when (audioFormat) {
             TtsAudioFormat.PCM -> {
                 pcmAudioQueue.offer(data)
 
                 "AudioStreamPlayer added audio data to queue, queue size: ${pcmAudioQueue.size}".logD(
-                        TAG
+                    TAG
                 )
 
                 // 如果还没开始播放，启动播放
@@ -101,14 +121,57 @@ class AudioStreamPlayer(private val context: Context) {
                     startPcmPlayback()
                 }
             }
+
             else -> {
-                chunkQueue.offer(data)
-                "Added $audioFormat chunk, queue size: ${chunkQueue.size}".logD(TAG)
+                // 方案2: 数据累积策略
+                synchronized(accumulateLock) {
+                    accumulatedData.add(data)
+                    accumulatedSize += data.size
+                    "Accumulated data: ${data.size} bytes, total: $accumulatedSize bytes".logD(TAG)
+
+                    // 累积到一定大小后再放入播放队列
+                    if (accumulatedSize >= MIN_CHUNK_SIZE) {
+                        val mergedData = mergeAccumulatedChunks()
+                        chunkQueue.offer(mergedData)
+                        "Merged chunk added to queue, size: ${mergedData.size}, queue size: ${chunkQueue.size}".logD(TAG)
+                        accumulatedData.clear()
+                        accumulatedSize = 0
+                    }
+                }
+
                 if (!isChunkPlaying) {
                     startChunkPlayback()
                 }
             }
         }
+    }
+
+    /**
+     * 刷新剩余的累积数据到播放队列
+     * 在流结束时调用，确保所有数据都被播放
+     */
+    fun flushRemainingData() {
+        synchronized(accumulateLock) {
+            if (accumulatedSize > 0) {
+                val mergedData = mergeAccumulatedChunks()
+                chunkQueue.offer(mergedData)
+                "Flushed remaining data to queue, size: ${mergedData.size}".logD(TAG)
+                accumulatedData.clear()
+                accumulatedSize = 0
+            }
+        }
+    }
+
+    /** 合并累积的数据块 */
+    private fun mergeAccumulatedChunks(): ByteArray {
+        val totalSize = accumulatedData.sumOf { it.size }
+        val result = ByteArray(totalSize)
+        var offset = 0
+        for (chunk in accumulatedData) {
+            System.arraycopy(chunk, 0, result, offset, chunk.size)
+            offset += chunk.size
+        }
+        return result
     }
 
     // pcm 流式播放
@@ -123,97 +186,183 @@ class AudioStreamPlayer(private val context: Context) {
         "AudioStreamPlayer started playing".logD(TAG)
 
         pcmPlayJob =
-                scope.launch {
-                    while (isActive && isPcmPlaying) {
-                        val data = pcmAudioQueue.poll()
-                        if (data != null) {
-                            audioTrack?.write(data, 0, data.size)
-                        } else {
-                            delay(10) // 等待新数据
-                        }
+            scope.launch {
+                while (isActive && isPcmPlaying) {
+                    val data = pcmAudioQueue.poll()
+                    if (data != null) {
+                        audioTrack?.write(data, 0, data.size)
+                    } else {
+                        delay(10) // 等待新数据
                     }
                 }
+            }
     }
 
-    // 分片播放（用于 MP3/WAV/FLAC/OPUS）
+    // 方案1: 双缓冲分片播放（用于 MP3/WAV/FLAC/OPUS）
     private fun startChunkPlayback() {
         if (isChunkPlaying) {
             "Chunk player is already playing".logD(TAG)
             return
         }
         isChunkPlaying = true
-        "Chunk playback started".logD(TAG)
-        chunkPlayJob =
-                scope.launch {
-                    while (isActive && isChunkPlaying) {
-                        val chunkData = chunkQueue.poll()
-                        if (chunkData != null) {
-                            playChunk(chunkData)
-                        } else {
-                            delay(50)
-                        }
-                    }
-                }
-    }
+        "Chunk playback started with double buffering".logD(TAG)
 
-    private suspend fun playChunk(chunkData: ByteArray) =
-            withContext(Dispatchers.IO) {
-                try {
-                    val tempFile =
-                            File.createTempFile(
-                                    "audio_chunk_${chunkCounter++}",
-                                    ".${audioFormat.format}",
-                                    context.cacheDir
-                            )
+        chunkPlayJob = scope.launch {
+            // 预加载第一个 chunk
+            prepareNextPlayer()
 
-                    FileOutputStream(tempFile).use { it.write(chunkData) }
+            while (isActive && isChunkPlaying) {
+                if (isNextPlayerReady && nextPlayer != null) {
+                    // 切换: next -> current
+                    currentPlayer?.release()
+                    currentTempFile?.delete()
 
-                    "Playing chunk: ${tempFile.name}, size: ${chunkData.size}".logD(TAG)
+                    currentPlayer = nextPlayer
+                    currentTempFile = nextTempFile
+                    nextPlayer = null
+                    nextTempFile = null
+                    isNextPlayerReady = false
 
-                    val player =
-                            MediaPlayer().apply {
-                                setAudioAttributes(
-                                        AudioAttributes.Builder()
-                                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                                .setUsage(AudioAttributes.USAGE_MEDIA)
-                                                .build()
-                                )
-                                setDataSource(tempFile.absolutePath)
-                                prepare()
-                            }
+                    // 并行：播放当前 chunk 的同时，异步准备下一个
+                    val playJob = async { playCurrentChunk() }
+                    val prepareJob = async { prepareNextPlayer() }
 
-                    suspendCancellableCoroutine<Unit> { continuation ->
-                        player.setOnCompletionListener {
-                            "Chunk playback completed: ${tempFile.name}".logD(TAG)
-                            player.release()
-                            tempFile.delete()
-                            continuation.resume(Unit) {}
-                        }
-                        player.setOnErrorListener { mp, what, extra ->
-                            "Chunk playback error: what=$what, extra=$extra".logD(TAG)
-                            mp.release()
-                            tempFile.delete()
-                            continuation.resume(Unit) {}
-                            true
-                        }
-                        player.start()
-                    }
-                } catch (e: Exception) {
-                    "Error playing chunk: ${e.message}".logD(TAG)
+                    // 等待播放完成
+                    playJob.await()
+
+                    // 确保下一个 chunk 准备好（如果还没准备好的话）
+                    prepareJob.await()
+                } else if (chunkQueue.isEmpty() && accumulatedSize == 0) {
+                    // 队列为空且没有累积数据，等待新数据或结束
+                    delay(20)
+                } else {
+                    // 有数据但还没准备好，尝试准备
+                    prepareNextPlayer()
+                    delay(10)
                 }
             }
+
+            // 清理资源
+            currentPlayer?.release()
+            currentPlayer = null
+            currentTempFile?.delete()
+            currentTempFile = null
+            nextPlayer?.release()
+            nextPlayer = null
+            nextTempFile?.delete()
+            nextTempFile = null
+        }
+    }
+
+    /** 准备下一个播放器（双缓冲的核心） */
+    private suspend fun prepareNextPlayer() = withContext(Dispatchers.IO) {
+        if (isNextPlayerReady || nextPlayer != null) {
+            return@withContext
+        }
+
+        val chunkData = chunkQueue.poll()
+        if (chunkData == null) {
+            return@withContext
+        }
+
+        try {
+            val tempFile = File.createTempFile(
+                "audio_chunk_${chunkCounter++}",
+                ".${audioFormat.format}",
+                context.cacheDir
+            )
+
+            FileOutputStream(tempFile).use { it.write(chunkData) }
+
+            val player = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
+                setDataSource(tempFile.absolutePath)
+                prepare()  // 在后台线程同步准备
+            }
+
+            nextPlayer = player
+            nextTempFile = tempFile
+            isNextPlayerReady = true
+            "Prepared next chunk: ${tempFile.name}, size: ${chunkData.size}".logD(TAG)
+        } catch (e: Exception) {
+            "Error preparing next chunk: ${e.message}".logD(TAG)
+        }
+    }
+
+    /** 播放当前准备好的 chunk */
+    private suspend fun playCurrentChunk() = suspendCancellableCoroutine<Unit> { continuation ->
+        val player = currentPlayer
+        if (player == null) {
+            continuation.resume(Unit) {}
+            return@suspendCancellableCoroutine
+        }
+
+        player.setOnCompletionListener {
+            "Chunk playback completed: ${currentTempFile?.name}".logD(TAG)
+            continuation.resume(Unit) {}
+        }
+
+        player.setOnErrorListener { _, what, extra ->
+            "Chunk playback error: what=$what, extra=$extra".logD(TAG)
+            continuation.resume(Unit) {}
+            true
+        }
+
+        continuation.invokeOnCancellation {
+            try {
+                player.stop()
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+
+        try {
+            player.start()
+            "Started playing chunk: ${currentTempFile?.name}".logD(TAG)
+        } catch (e: Exception) {
+            "Error starting playback: ${e.message}".logD(TAG)
+            continuation.resume(Unit) {}
+        }
+    }
 
     /** 停止播放 */
     fun stop() {
         "Stopping playback".logD(TAG)
 
+        // PCM 播放停止
         isPcmPlaying = false
         pcmPlayJob?.cancel()
         audioTrack?.stop()
         pcmAudioQueue.clear()
 
+        // Chunk 播放停止
         isChunkPlaying = false
         chunkPlayJob?.cancel()
+
+        // 释放双缓冲播放器
+        currentPlayer?.release()
+        currentPlayer = null
+        currentTempFile?.delete()
+        currentTempFile = null
+
+        nextPlayer?.release()
+        nextPlayer = null
+        nextTempFile?.delete()
+        nextTempFile = null
+        isNextPlayerReady = false
+
+        // 清理累积数据
+        synchronized(accumulateLock) {
+            accumulatedData.clear()
+            accumulatedSize = 0
+        }
+        chunkQueue.clear()
+
         cleanupTempFiles()
     }
 

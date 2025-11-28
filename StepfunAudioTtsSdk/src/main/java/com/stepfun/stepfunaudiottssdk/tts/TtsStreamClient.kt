@@ -45,7 +45,7 @@ class TtsStreamClient {
     private var sessionId: String? = null
     private var isAudioDoneReceived = false  // 标记是否已收到 audio.done 事件
     private var isDoneEventSent = false       // 标记是否已发送 done 事件
-
+    private var connectTime: Long = 0
 
     /**
      * 连接WebSocket并创建会话
@@ -64,6 +64,7 @@ class TtsStreamClient {
         // 重置状态标记
         isAudioDoneReceived = false
         isDoneEventSent = false
+        connectTime = System.currentTimeMillis()
 
         this.callback = callback
         val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
@@ -84,25 +85,29 @@ class TtsStreamClient {
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 super.onFailure(webSocket, t, response)
 
-                "WebSocket 连接失败，异常: ${t.message}, response :${response?.toString()}".logD(TAG)
+                val duration = System.currentTimeMillis() - connectTime
+                "WebSocket 连接异常断开 (耗时${duration}ms). Exception: ${t.javaClass.simpleName}, Msg: ${t.message}".logD(TAG)
+                if (response != null) {
+                    "WebSocket Response: code=${response.code}, message=${response.message}".logD(TAG)
+                }
 
                 // 判断是否是正常的空闲超时断开
-                val isIdleTimeout = isIdleTimeoutDisconnection(t, response)
+                val isIdleTimeout = isIdleTimeoutDisconnection(t, response, duration)
 
                 if (isIdleTimeout) {
                     // 60秒空闲超时，这是正常行为
-                    "WebSocket 空闲超时断开（60秒无活动），这是正常行为".logD(TAG)
+                    "WebSocket 空闲超时断开，这是正常行为".logD(TAG)
                     scope.launch {
                         callback.onComplete()
                     }
                 } else {
                     // 真正的连接错误
-                    "WebSocket 连接失败: ${t.message}, response: ${response?.code}".logD(TAG)
+                    "WebSocket 连接失败: ${t.message}".logD(TAG)
                     scope.launch {
                         callback.onError(
                             TtsStreamError(
                                 code = TtsError.ERROR_WEBSOCKET,
-                                message = t.message ?: "WebSocket connection failed"
+                                message = t.message ?: "WebSocket connection failed (${t.javaClass.simpleName})"
                             )
                         )
                     }
@@ -129,6 +134,15 @@ class TtsStreamClient {
                 "消息格式错误，缺少 type 字段".logD(TAG)
                 return
             }
+
+            // 关键修复：在 IO 线程同步设置状态标记，避免 onFailure 回调时的竞态条件
+            when (type) {
+                "tts.response.audio.done" -> {
+                    isAudioDoneReceived = true
+                    "已标记 audio.done 接收完成".logD(TAG)
+                }
+            }
+
             scope.launch {
                 when (type) {
                     "tts.connection.done" -> {
@@ -168,7 +182,7 @@ class TtsStreamClient {
                     }
 
                     "tts.response.audio.done" -> {
-                        isAudioDoneReceived = true
+                        // 状态已在上面同步设置
                         callback?.onComplete()
                         close()
                     }
@@ -262,14 +276,22 @@ class TtsStreamClient {
      * 根据 API 文档：如果连续 60 秒无动作，系统会自动断开连接
      * 这种情况下应该视为正常完成，而不是错误
      */
-    private fun isIdleTimeoutDisconnection(t: Throwable, response: Response?): Boolean {
+    /**
+     * 判断是否是正常断开（非错误情况）
+     *
+     * 根据 API 文档：如果连续 60 秒无动作，系统会自动断开连接
+     * 这种情况下应该视为正常完成，而不是错误
+     */
+    private fun isIdleTimeoutDisconnection(t: Throwable, _response: Response?, _duration: Long): Boolean {
         // 1. 如果已经收到 audio.done 事件，说明正常完成了
         if (isAudioDoneReceived) {
+            "判定为正常断开：已收到 audio.done 事件".logD(TAG)
             return true
         }
 
         // 2. 如果已经发送了 done 事件，后续断开也是正常的
         if (isDoneEventSent) {
+            "判定为正常断开：已发送 done 事件".logD(TAG)
             return true
         }
 
@@ -284,6 +306,10 @@ class TtsStreamClient {
         val isNormalClosure = message.isEmpty() ||
                 message.contains("Socket closed", ignoreCase = true) ||
                 message.contains("Connection closed", ignoreCase = true)
+
+        if (isTimeoutException || isNormalClosure) {
+            "判定为正常断开：异常类型=$exceptionClassName, 消息=$message".logD(TAG)
+        }
 
         return isTimeoutException || isNormalClosure
     }

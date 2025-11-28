@@ -8,7 +8,7 @@ data class TtsConfig(
     val defaultVoice: TtsVoice = TtsVoice.STEP_TTS_MINI_DEFAULT,
 
     // 默认响应格式
-    val defaultResponseFormat: TtsAudioFormat = TtsAudioFormat.MP3,
+    val defaultResponseFormat: TtsAudioFormat = TtsAudioFormat.PCM,
 
     // 默认语速
     val defaultSpeed: Float = 1.0f,

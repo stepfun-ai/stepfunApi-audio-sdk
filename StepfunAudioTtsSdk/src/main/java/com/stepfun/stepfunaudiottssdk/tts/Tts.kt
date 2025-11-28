@@ -236,6 +236,8 @@ object Tts {
             }
 
             override fun onComplete() {
+                // 刷新剩余的累积数据，确保所有数据都被播放
+                audioStreamPlayer?.flushRemainingData()
                 callback.onComplete()
             }
 
