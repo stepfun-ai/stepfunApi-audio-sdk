@@ -207,7 +207,7 @@ object SpeechSdk {
          */
         fun createStreamSession(
             context: Context,
-            voice: TtsVoice = TtsVoice.STEP_TTS_MINI_DEFAULT,
+            voice: String = TtsVoice.STEP_TTS_MINI_DEFAULT.voiceId,
             callback: TtsStreamCallback
         ) {
             val config = SpeechCoreSdk.getConfig().ttsConfig

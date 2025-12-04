@@ -221,7 +221,7 @@ class TtsStreamClient {
         val event = TtsCreateEvent(
             data = TtsCreateEvent.CreateData(
                 sessionId = sessionId,
-                voiceId = params.voice.voiceId,
+                voiceId = params.voice,
                 responseFormat = params.responseFormat.format,
                 sampleRate = params.sampleRate,
                 volumeRatio = params.volumeRatio,

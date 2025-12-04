@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity() {
         // 1. 创建流式会话
         SpeechSdk.TTS.createStreamSession(
             context = this,
-            voice = TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG,
+            voice = TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG.voiceId,
             callback = object : TtsStreamCallback {
                 override fun onConnectionEstablished(sessionId: String) {
                    runOnUiThread {
