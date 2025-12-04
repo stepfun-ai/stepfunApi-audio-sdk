@@ -12,6 +12,8 @@ val publishableModules = setOf(
     "StepfunAudioTtsSdk",
 )
 
+val jitpackGroupId = "com.github.stepfun-ai.stepfunApi-audio-sdk"
+
 subprojects {
     if (project.name in publishableModules) {
         apply(plugin = "maven-publish")
@@ -30,17 +32,27 @@ subprojects {
             extensions.configure<PublishingExtension> {
                 publications {
                     create<MavenPublication>("release") {
-                        // 动态生成 Group ID，例如: com.stepfun.stepfunaudiocoresdk
-                        groupId = "com.stepfun.${project.name.lowercase()}"
-                        // 使用模块名作为 Artifact ID
+                        groupId = jitpackGroupId
                         artifactId = project.name
-                        // 统一版本号，也可以从 gradle.properties 读取
-                        version = "1.0.0"
+                        version = project.findProperty("VERSION_NAME")?.toString() ?: "1.0.0"
 
                         // 确保 release 组件存在
                         val releaseComponent = components.findByName("release")
                         if (releaseComponent != null) {
                             from(releaseComponent)
+                        }
+                        
+                        pom.withXml {
+                            val dependencies = asNode().appendNode("dependencies")
+                            configurations.findByName("api")?.dependencies?.forEach { dep ->
+                                if (dep is ProjectDependency) {
+                                    val depNode = dependencies.appendNode("dependency")
+                                    depNode.appendNode("groupId", jitpackGroupId)
+                                    depNode.appendNode("artifactId", dep.name)
+                                    depNode.appendNode("version", version)
+                                    depNode.appendNode("scope", "compile")
+                                }
+                            }
                         }
                     }
                 }
