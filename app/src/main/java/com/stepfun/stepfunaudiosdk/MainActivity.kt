@@ -88,6 +88,7 @@ class MainActivity : AppCompatActivity() {
             .environment(Environment.PRODUCTION)
             .httpBaseUrl("https://k3s-tts.stepfun-inc.net/")
             .webSocketUrl("wss://k3s-tts.stepfun-inc.net/openapi/v1/realtime/audio")
+            .customHeaders(mapOf("header_keys" to "header_values"))
             .enableLogging(true)
             .build()
 

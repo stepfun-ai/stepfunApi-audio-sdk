@@ -16,6 +16,9 @@ data class SpeechConfig(
     val enableFileLog: Boolean = false,
     val enableLogging: Boolean = false,
 
+    //请求头
+    val customHeaders: Map<String, String> = emptyMap(),
+
     // 网络配置
     val connectTimeout: Long = 30,
     val readTimeout: Long = 30,
@@ -35,6 +38,7 @@ data class SpeechConfig(
         private var environment: Environment = Environment.PRODUCTION
         private var enableFileLog: Boolean = false
         private var enableLogging: Boolean = false
+        private var customHeaders : Map<String, String> = emptyMap()
         private var connectTimeout: Long = 30
         private var readTimeout: Long = 30
         private var writeTimeout: Long = 60
@@ -54,6 +58,7 @@ data class SpeechConfig(
             }
             this.httpBaseUel = url
         }
+
         fun webSocketUrl(url: String) = apply {
             require(url.isNotEmpty()) {
                 "websocket Url cannot be empty"
@@ -66,11 +71,14 @@ data class SpeechConfig(
         fun ttsConfig(config: TtsConfig) = apply { this.ttsConfig = config }
         fun asrConfig(config: AsrConfig) = apply { this.asrConfig = config }
 
+        fun customHeaders(headers: Map<String, String>) = apply { this.customHeaders = headers }
+
         fun build() = SpeechConfig(
 //            apiKey = apiKey,
             httpBaseUrl = httpBaseUel,
             webSocketUrl = webSocketUrl,
             environment = environment,
+            customHeaders = customHeaders,
             enableFileLog = enableFileLog,
             enableLogging = enableLogging,
             connectTimeout = connectTimeout,

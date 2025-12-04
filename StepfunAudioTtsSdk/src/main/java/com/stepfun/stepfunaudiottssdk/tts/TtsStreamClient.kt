@@ -30,6 +30,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechCoreSdk
+import okhttp3.Request
 
 class TtsStreamClient {
     companion object {
@@ -67,11 +68,20 @@ class TtsStreamClient {
         connectTime = System.currentTimeMillis()
 
         this.callback = callback
+        val config = SpeechCoreSdk.getConfig()
         val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
         val url = "$wsUrl?model=${params.model.modelId}"
         "Connecting to WebSocket URL: $url".logD(TAG)
 
-        webSocket = WebSocketClient.newWebSocket(url, object : WebSocketListener() {
+        val requestBuilder = Request.Builder().url(url)
+        config.customHeaders.forEach { (key, value) ->
+            requestBuilder.addHeader(key, value)
+        }
+
+        val request = requestBuilder.build()
+        "Request headers: ${request.headers}".logD(TAG)
+
+        webSocket = WebSocketClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 super.onOpen(webSocket, response)
                 "WebSocket 连接成功".logD(TAG)
