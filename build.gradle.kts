@@ -12,7 +12,10 @@ val publishableModules = setOf(
     "StepfunAudioTtsSdk",
 )
 
-val jitpackGroupId = "com.github.stepfun-ai.stepfunApi-audio-sdk"
+// 使用 JitPack 传递的 group 和 version 参数
+val jitpackGroupId = project.findProperty("group")?.toString()
+    ?: "com.github.stepfun-ai.stepfunApi-audio-sdk"
+val jitpackVersion = project.findProperty("version")?.toString() ?: "1.0.0"
 
 subprojects {
     if (project.name in publishableModules) {
@@ -34,23 +37,42 @@ subprojects {
                     create<MavenPublication>("release") {
                         groupId = jitpackGroupId
                         artifactId = project.name
-                        version = project.findProperty("VERSION_NAME")?.toString() ?: "1.0.0"
+                        version = jitpackVersion
 
                         // 确保 release 组件存在
                         val releaseComponent = components.findByName("release")
                         if (releaseComponent != null) {
                             from(releaseComponent)
                         }
-                        
+
+                        // 修正 POM 中的项目依赖坐标
                         pom.withXml {
-                            val dependencies = asNode().appendNode("dependencies")
-                            configurations.findByName("api")?.dependencies?.forEach { dep ->
-                                if (dep is ProjectDependency) {
-                                    val depNode = dependencies.appendNode("dependency")
-                                    depNode.appendNode("groupId", jitpackGroupId)
-                                    depNode.appendNode("artifactId", dep.name)
-                                    depNode.appendNode("version", version)
-                                    depNode.appendNode("scope", "compile")
+                            val dependenciesNode = asNode().children().find {
+                                (it as? groovy.util.Node)?.name()?.toString()?.contains("dependencies") == true
+                            } as? groovy.util.Node
+
+                            dependenciesNode?.children()?.forEach { depNode ->
+                                val node = depNode as? groovy.util.Node
+                                node?.children()?.forEach { child ->
+                                    val childNode = child as? groovy.util.Node
+                                    val nodeName = childNode?.name()?.toString() ?: ""
+
+                                    // 替换项目依赖的 groupId
+                                    if (nodeName.contains("groupId")) {
+                                        val groupIdValue = childNode?.value()?.toString() ?: ""
+                                        if (groupIdValue.contains("StepfunAudio") ||
+                                            groupIdValue.contains("stepfunaudio")) {
+                                            childNode?.setValue(jitpackGroupId)
+                                        }
+                                    }
+
+                                    // 替换项目依赖的 version
+                                    if (nodeName.contains("version")) {
+                                        val versionValue = childNode?.value()?.toString() ?: ""
+                                        if (versionValue == "unspecified" || versionValue == "1.0.0") {
+                                            childNode?.setValue(jitpackVersion)
+                                        }
+                                    }
                                 }
                             }
                         }
