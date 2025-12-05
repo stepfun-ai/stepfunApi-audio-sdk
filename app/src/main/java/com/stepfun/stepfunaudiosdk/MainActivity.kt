@@ -5,6 +5,8 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsAudioFormat
+import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsModel
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
 import com.stepfun.stepfunaudiocoresdk.audio.core.Environment
 import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechConfig
@@ -14,6 +16,7 @@ import com.stepfun.stepfunaudiottssdk.tts.TtsError
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamCallback
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamError
 import com.stepfun.stepfunaudiottssdk.tts.configs.TtsStreamParams
+import com.stepfun.stepfunaudiottssdk.tts.event.TtsCreateEvent
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,7 +38,7 @@ class MainActivity : AppCompatActivity() {
 
         etText = EditText(this).apply {
             hint = "请输入要合成的文本"
-            setText("你好，我是阶跃星辰语音助手，很高兴为你服务。")
+            setText("你好，我是阶跃星辰语音助手，很高兴为你服务。你好，我是阶跃星辰语音助手，很高兴为你服务。你好，我是阶跃星辰语音助手，很高兴为你服务。")
         }
 
         btnPlay = Button(this).apply {
@@ -165,35 +168,35 @@ class MainActivity : AppCompatActivity() {
         SpeechSdk.TTS.createStreamSession(
             context = this,
             params = TtsStreamParams(
-                model = "step-tts-2",
-                voice = TtsVoice.STEP_TTS_MINI_WENROUNANSHENG.voiceId
+                model = TtsModel.STEP_TTS_MINI.modelId,
+                voice = TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG.voiceId,
+                responseFormat = TtsAudioFormat.PCM,
+                features = TtsCreateEvent.Features(
+                    enableMarkdownFilter = true
+                )
             ),
             callback = object : TtsStreamCallback {
                 override fun onConnectionEstablished(sessionId: String) {
-//                   runOnUiThread {
-//                       Toast.makeText(this@MainActivity, "连接成功", Toast.LENGTH_SHORT).show()
-//                   }
+                   runOnUiThread {
+                       Toast.makeText(this@MainActivity, "连接成功", Toast.LENGTH_SHORT).show()
+                   }
                 }
 
                 override fun onSessionCreated(sessionId: String) {
-//                    runOnUiThread {
-//                        btnStreamPlay.text = "发送文本..."
+                    runOnUiThread {
+                        btnStreamPlay.text = "发送文本..."
 //                         2. 会话创建成功后，发送文本
-//                        SpeechSdk.TTS.sendStreamText(text)
+                        SpeechSdk.TTS.sendStreamText(text)
 //                         3. 发送完毕后，通知结束（如果是单句播放）
-//                        SpeechSdk.TTS.finishStream()
-//                    }
-//                  2. 会话创建成功后，发送文本
-                    SpeechSdk.TTS.sendStreamText(text)
-//                  3. 发送完毕后，通知结束（如果是单句播放）
-                    SpeechSdk.TTS.finishStream()
+                        SpeechSdk.TTS.finishStream()
+                    }
                 }
 
                 override fun onSentenceStart(text: String) {
-//                    runOnUiThread {
-//                        Toast.makeText(this@MainActivity, "开始播放: $text", Toast.LENGTH_SHORT)
-//                            .show()
-//                    }
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "开始播放: $text", Toast.LENGTH_SHORT)
+                            .show()
+                    }
                 }
 
                 override fun onAudioData(audioData: ByteArray, isFinished: Boolean) {
@@ -209,23 +212,23 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onComplete() {
-//                    runOnUiThread {
-//                        btnStreamPlay.isEnabled = true
-//                        btnStreamPlay.text = "播放 TTS (流式)"
-//                        Toast.makeText(this@MainActivity, "流式播放完成", Toast.LENGTH_SHORT).show()
-//                    }
+                    runOnUiThread {
+                        btnStreamPlay.isEnabled = true
+                        btnStreamPlay.text = "播放 TTS (流式)"
+                        Toast.makeText(this@MainActivity, "流式播放完成", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
                 override fun onError(error: TtsStreamError) {
-//                    runOnUiThread {
-//                        btnStreamPlay.isEnabled = true
-//                        btnStreamPlay.text = "播放 TTS (流式)"
-//                        Toast.makeText(
-//                            this@MainActivity,
-//                            "流式错误: ${error.message}",
-//                            Toast.LENGTH_LONG
-//                        ).show()
-//                    }
+                    runOnUiThread {
+                        btnStreamPlay.isEnabled = true
+                        btnStreamPlay.text = "播放 TTS (流式)"
+                        Toast.makeText(
+                            this@MainActivity,
+                            "流式错误: ${error.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
         )

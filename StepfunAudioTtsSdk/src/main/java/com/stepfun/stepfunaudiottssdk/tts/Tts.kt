@@ -2,7 +2,7 @@ package com.stepfun.stepfunaudiottssdk.tts
 
 import android.content.Context
 import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioPlayer
-import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioStreamPlayer
+import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioStreamPlayerV2
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamCallback
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamError
@@ -16,7 +16,7 @@ object Tts {
     private var ttsClient: TtsClient? = null
     private var audioPlayer: AudioPlayer? = null
     private var ttsStreamClient: TtsStreamClient? = null
-    private var audioStreamPlayer: AudioStreamPlayer? = null
+    private var audioStreamPlayer: AudioStreamPlayerV2? = null
 
     private fun getClient(): TtsClient {
         if (!SpeechCoreSdk.isInitialized()) {
@@ -203,7 +203,7 @@ object Tts {
 
         // 创建新的客户端和播放器
         ttsStreamClient = TtsStreamClient()
-        audioStreamPlayer = AudioStreamPlayer(context.applicationContext).apply {
+        audioStreamPlayer = AudioStreamPlayerV2(context.applicationContext).apply {
             initialize(params.sampleRate, params.responseFormat)
         }
 
@@ -236,8 +236,6 @@ object Tts {
             }
 
             override fun onComplete() {
-                // 刷新剩余的累积数据，确保所有数据都被播放
-                audioStreamPlayer?.flushRemainingData()
                 callback.onComplete()
             }
 

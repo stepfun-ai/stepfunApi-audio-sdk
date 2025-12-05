@@ -4,16 +4,18 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.config.PronunciationMap
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsAudioFormat
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsModel
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
+import com.stepfun.stepfunaudiottssdk.tts.event.TtsCreateEvent
 
 data class TtsStreamParams(
 //    val model: TtsModel,
     val model: String,
 //    val voice: TtsVoice,
     val voice: String,
-    val responseFormat: TtsAudioFormat = TtsAudioFormat.MP3,
+    val responseFormat: TtsAudioFormat = TtsAudioFormat.PCM,
     val sampleRate: Int = 24000,
     val volumeRatio: Float = 1.0f,
     val speedRatio: Float = 1.0f,
+    val features: TtsCreateEvent.Features? = null,
     val pronunciationMap: List<PronunciationMap>? = null
 ) {
     class Builder {
@@ -24,6 +26,7 @@ data class TtsStreamParams(
         private var volumeRatio: Float = 1.0f
         private var speedRatio: Float = 1.0f
         private var pronunciationMap: List<PronunciationMap>? = null
+        private var features: TtsCreateEvent.Features? = null
 
         fun model(model: String) = apply { this.model = model }
         fun voice(voice: String) = apply { this.voice = voice }
@@ -49,6 +52,10 @@ data class TtsStreamParams(
             this.pronunciationMap = map
         }
 
+        fun features(features: TtsCreateEvent.Features) = apply {
+            this.features = features
+        }
+
         fun build(): TtsStreamParams {
             requireNotNull(model) { "model is required" }
             requireNotNull(voice) { "voice is required" }
@@ -59,7 +66,8 @@ data class TtsStreamParams(
                 sampleRate = sampleRate,
                 volumeRatio = volumeRatio,
                 speedRatio = speedRatio,
-                pronunciationMap = pronunciationMap
+                pronunciationMap = pronunciationMap,
+                features = features
             )
         }
     }

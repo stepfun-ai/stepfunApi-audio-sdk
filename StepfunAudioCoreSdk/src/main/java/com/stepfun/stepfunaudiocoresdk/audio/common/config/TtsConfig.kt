@@ -27,6 +27,7 @@ data class TtsConfig(
 
     // 缓存目录
     val cacheDir: String? = null
+
 )
 
 enum class TtsSampleRate(val rate: Int) {

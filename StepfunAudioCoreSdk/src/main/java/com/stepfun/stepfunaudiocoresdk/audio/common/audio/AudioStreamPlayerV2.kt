@@ -4,22 +4,33 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
-import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import androidx.annotation.OptIn
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.ByteArrayDataSource
+import androidx.media3.datasource.DataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsAudioFormat
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsSampleRate
 import com.stepfun.stepfunaudiocoresdk.audio.common.logger.COMMON_TAG
 import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logD
-import java.io.File
-import java.io.FileOutputStream
+import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logI
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlinx.coroutines.*
 import kotlin.concurrent.Volatile
 
-class AudioStreamPlayer(private val context: Context) {
+class AudioStreamPlayerV2(private val context: Context) {
     companion object {
         private const val TAG = COMMON_TAG + "AudioStreamPlayer"
     }
 
+    // ========== PCM 播放相关 ==========
     private var audioTrack: AudioTrack? = null
     private var sampleRate = TtsSampleRate.RATE_24000.rate
     private var channelConfig = AudioFormat.CHANNEL_OUT_MONO
@@ -31,20 +42,18 @@ class AudioStreamPlayer(private val context: Context) {
     @Volatile
     private var isPaused = false
 
+    // ========== ExoPlayer Chunk 播放相关 ==========
     private var audioFormat: TtsAudioFormat = TtsAudioFormat.PCM
     private var chunkQueue = ConcurrentLinkedQueue<ByteArray>()
     private var isChunkPlaying = false
-    private var chunkPlayJob: Job? = null
-    private var chunkCounter = 0
 
-    // 双缓冲播放器
-    private var currentPlayer: MediaPlayer? = null
-    private var nextPlayer: MediaPlayer? = null
-    private var currentTempFile: File? = null
-    private var nextTempFile: File? = null
-    private var isNextPlayerReady = false
+    // ExoPlayer 实例
+    private var exoPlayer: ExoPlayer? = null
+    @Volatile
+    private var isExoPlayerBusy = false
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     /**
      * 初始化播放器
@@ -61,9 +70,9 @@ class AudioStreamPlayer(private val context: Context) {
 
         when (this.audioFormat) {
             TtsAudioFormat.PCM -> initPcmPlayer()
-            else -> initChunkPlayer()
+            else -> initExoPlayer()
         }
-        "AudioStreamPlayer initialized with format: $audioFormat, sampleRate: $sampleRate".logD(TAG)
+        "AudioStreamPlayer initialized with format: $audioFormat, sampleRate: $sampleRate".logI(TAG)
     }
 
     /** 初始化 PCM 播放器 */
@@ -91,13 +100,53 @@ class AudioStreamPlayer(private val context: Context) {
         "PCM player initialized with buffer size: $bufferSize".logD(TAG)
     }
 
-    private fun initChunkPlayer() {
-        // MediaPlayer 会在播放时动态创建
-        "Chunk player initialized for format: $audioFormat".logD(TAG)
+    /** 初始化 ExoPlayer */
+    private fun initExoPlayer() {
+        mainHandler.post {
+            releaseExoPlayer()
+            exoPlayer = ExoPlayer.Builder(context).build().apply {
+                addListener(exoPlayerListener)
+            }
+            "ExoPlayer initialized for format: $audioFormat".logD(TAG)
+        }
+    }
+
+    /** ExoPlayer 事件监听器 */
+    private val exoPlayerListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            when (playbackState) {
+                Player.STATE_ENDED -> {
+                    "ExoPlayer chunk playback ended".logD(TAG)
+                    isExoPlayerBusy = false
+                    // 播放完成后，尝试播放下一个 chunk
+                    playNextChunkIfAvailable()
+                }
+                Player.STATE_READY -> {
+                    "ExoPlayer ready".logD(TAG)
+                }
+                Player.STATE_BUFFERING -> {
+                    "ExoPlayer buffering".logD(TAG)
+                }
+                Player.STATE_IDLE -> {
+                    "ExoPlayer idle".logD(TAG)
+                }
+            }
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            "ExoPlayer error: ${error.message}".logD(TAG)
+            isExoPlayerBusy = false
+            // 出错后尝试播放下一个
+            playNextChunkIfAvailable()
+        }
     }
 
     /** 添加音频数据到队列 */
     fun addAudioData(data: ByteArray) {
+        if (data.isEmpty()) {
+            "Ignoring empty audio data".logD(TAG)
+            return
+        }
         when (audioFormat) {
             TtsAudioFormat.PCM -> {
                 pcmAudioQueue.offer(data)
@@ -109,18 +158,18 @@ class AudioStreamPlayer(private val context: Context) {
             }
 
             else -> {
-                // 后端保证数据块完整，直接入队播放
                 chunkQueue.offer(data)
                 "AudioStreamPlayer added chunk data, size: ${data.size}, queue size: ${chunkQueue.size}".logD(TAG)
 
                 if (!isChunkPlaying) {
-                    startChunkPlayback()
+                    isChunkPlaying = true
+                    playNextChunkIfAvailable()
                 }
             }
         }
     }
 
-    // pcm 流式播放
+    // ========== PCM 流式播放 ==========
     private fun startPcmPlayback() {
         if (isPcmPlaying) {
             "AudioStreamPlayer is already playing".logD(TAG)
@@ -159,128 +208,66 @@ class AudioStreamPlayer(private val context: Context) {
             }
     }
 
-    // 双缓冲分片播放（用于 MP3/WAV/FLAC/OPUS）
-    private fun startChunkPlayback() {
-        if (isChunkPlaying) {
-            "Chunk player is already playing".logD(TAG)
+    // ========== ExoPlayer Chunk 播放 ==========
+    /** 尝试播放队列中的下一个 chunk */
+    private fun playNextChunkIfAvailable() {
+        if (isExoPlayerBusy || isPaused) {
             return
-        }
-        isChunkPlaying = true
-        "Chunk playback started with double buffering".logD(TAG)
-
-        chunkPlayJob = scope.launch {
-            prepareNextPlayer()
-
-            while (isActive && isChunkPlaying) {
-                if (isNextPlayerReady && nextPlayer != null) {
-                    currentPlayer?.release()
-                    currentTempFile?.delete()
-
-                    currentPlayer = nextPlayer
-                    currentTempFile = nextTempFile
-                    nextPlayer = null
-                    nextTempFile = null
-                    isNextPlayerReady = false
-
-                    val playJob = async { playCurrentChunk() }
-                    val prepareJob = async { prepareNextPlayer() }
-
-                    playJob.await()
-                    prepareJob.await()
-                } else if (chunkQueue.isEmpty()) {
-                    // 队列为空，等待新数据
-                    delay(20)
-                } else {
-                    prepareNextPlayer()
-                    delay(10)
-                }
-            }
-
-            // 清理资源
-            currentPlayer?.release()
-            currentPlayer = null
-            currentTempFile?.delete()
-            currentTempFile = null
-            nextPlayer?.release()
-            nextPlayer = null
-            nextTempFile?.delete()
-            nextTempFile = null
-        }
-    }
-
-    /** 准备下一个播放器（双缓冲的核心） */
-    private suspend fun prepareNextPlayer() = withContext(Dispatchers.IO) {
-        if (isNextPlayerReady || nextPlayer != null) {
-            return@withContext
         }
 
         val chunkData = chunkQueue.poll()
-        if (chunkData == null) {
-            return@withContext
-        }
-
-        try {
-            val tempFile = File.createTempFile(
-                "audio_chunk_${chunkCounter++}",
-                ".${audioFormat.format}",
-                context.cacheDir
-            )
-
-            FileOutputStream(tempFile).use { it.write(chunkData) }
-
-            val player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
-                setDataSource(tempFile.absolutePath)
-                prepare()
+        if (chunkData != null) {
+            playChunkWithExoPlayer(chunkData)
+        } else {
+            // 队列为空，等待新数据
+            scope.launch {
+                delay(20)
+                if (chunkQueue.isNotEmpty() && !isExoPlayerBusy && !isPaused) {
+                    mainHandler.post { playNextChunkIfAvailable() }
+                }
             }
-
-            nextPlayer = player
-            nextTempFile = tempFile
-            isNextPlayerReady = true
-            "Prepared next chunk: ${tempFile.name}, size: ${chunkData.size}".logD(TAG)
-        } catch (e: Exception) {
-            "Error preparing next chunk: ${e.message}".logD(TAG)
         }
     }
 
-    /** 播放当前准备好的 chunk */
-    private suspend fun playCurrentChunk() = suspendCancellableCoroutine<Unit> { continuation ->
-        val player = currentPlayer
-        if (player == null) {
-            continuation.resume(Unit) {}
-            return@suspendCancellableCoroutine
-        }
-
-        player.setOnCompletionListener {
-            "Chunk playback completed: ${currentTempFile?.name}".logD(TAG)
-            continuation.resume(Unit) {}
-        }
-
-        player.setOnErrorListener { _, what, extra ->
-            "Chunk playback error: what=$what, extra=$extra".logD(TAG)
-            continuation.resume(Unit) {}
-            true
-        }
-
-        continuation.invokeOnCancellation {
-            try {
-                player.stop()
-            } catch (e: Exception) {
-                // ignore
+    /**
+     * 使用 ExoPlayer 播放内存中的音频数据
+     * 核心优化：直接从 ByteArray 播放，无需写入临时文件
+     */
+    @OptIn(UnstableApi::class)
+    private fun playChunkWithExoPlayer(audioData: ByteArray) {
+        mainHandler.post {
+            val player = exoPlayer
+            if (player == null) {
+                "ExoPlayer is null, cannot play chunk".logD(TAG)
+                isExoPlayerBusy = false
+                return@post
             }
-        }
 
-        try {
-            player.start()
-            "Started playing chunk: ${currentTempFile?.name}".logD(TAG)
-        } catch (e: Exception) {
-            "Error starting playback: ${e.message}".logD(TAG)
-            continuation.resume(Unit) {}
+            try {
+                isExoPlayerBusy = true
+
+                // 1. 创建 ByteArrayDataSource - 直接从内存读取
+                val dataSource = ByteArrayDataSource(audioData)
+
+                // 2. 创建 DataSource.Factory
+                val dataSourceFactory = DataSource.Factory { dataSource }
+
+                // 3. 创建 ProgressiveMediaSource
+                val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(MediaItem.fromUri(Uri.EMPTY))
+
+                // 4. 设置并播放
+                player.setMediaSource(mediaSource)
+                player.prepare()
+                player.play()
+
+                "Playing chunk with ExoPlayer, size: ${audioData.size} bytes".logD(TAG)
+            } catch (e: Exception) {
+                "Error playing chunk with ExoPlayer: ${e.message}".logD(TAG)
+                isExoPlayerBusy = false
+                // 出错后尝试下一个
+                playNextChunkIfAvailable()
+            }
         }
     }
 
@@ -289,6 +276,7 @@ class AudioStreamPlayer(private val context: Context) {
         "Stopping playback".logD(TAG)
 
         isPaused = false
+
         // PCM 播放停止
         isPcmPlaying = false
         pcmPlayJob?.cancel()
@@ -297,56 +285,61 @@ class AudioStreamPlayer(private val context: Context) {
 
         // Chunk 播放停止
         isChunkPlaying = false
-        chunkPlayJob?.cancel()
-
-        // 释放双缓冲播放器
-        currentPlayer?.release()
-        currentPlayer = null
-        currentTempFile?.delete()
-        currentTempFile = null
-
-        nextPlayer?.release()
-        nextPlayer = null
-        nextTempFile?.delete()
-        nextTempFile = null
-        isNextPlayerReady = false
-
+        isExoPlayerBusy = false
         chunkQueue.clear()
-        cleanupTempFiles()
+
+        // 停止 ExoPlayer
+        mainHandler.post {
+            exoPlayer?.stop()
+            exoPlayer?.clearMediaItems()
+        }
     }
 
     /** 暂停播放 */
     fun pause() {
         "Pausing playback".logD(TAG)
         isPaused = true
+        mainHandler.post {
+            exoPlayer?.pause()
+        }
     }
 
     /** 恢复播放 */
     fun resume() {
         "Resuming playback".logD(TAG)
         isPaused = false
+        mainHandler.post {
+            // 如果 ExoPlayer 有正在播放的内容，恢复它
+            if (exoPlayer?.playbackState == Player.STATE_READY || 
+                exoPlayer?.playbackState == Player.STATE_BUFFERING) {
+                exoPlayer?.play()
+            } else {
+                // 否则尝试播放队列中的下一个
+                playNextChunkIfAvailable()
+            }
+        }
+    }
+
+    /** 释放 ExoPlayer 资源 */
+    private fun releaseExoPlayer() {
+        exoPlayer?.removeListener(exoPlayerListener)
+        exoPlayer?.release()
+        exoPlayer = null
+        isExoPlayerBusy = false
     }
 
     /** 释放资源 */
     fun release() {
         "AudioStreamPlayer released resources".logD(TAG)
         stop()
+
         audioTrack?.release()
         audioTrack = null
-        scope.cancel()
-    }
 
-    /** 清理临时文件 */
-    private fun cleanupTempFiles() {
-        try {
-            context.cacheDir.listFiles()?.forEach { file ->
-                if (file.name.startsWith("audio_chunk_")) {
-                    file.delete()
-                    "Deleted temp file: ${file.name}".logD(TAG)
-                }
-            }
-        } catch (e: Exception) {
-            "Error cleaning temp files: ${e.message}".logD(TAG)
+        mainHandler.post {
+            releaseExoPlayer()
         }
+
+        scope.cancel()
     }
 }

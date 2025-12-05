@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.PronunciationMap
 import com.stepfun.stepfunaudiocoresdk.audio.common.logger.COMMON_TAG
 import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logD
+import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logI
 import com.stepfun.stepfunaudiocoresdk.audio.common.network.WebSocketClient
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamCallback
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamError
@@ -80,6 +81,7 @@ class TtsStreamClient {
 
         val request = requestBuilder.build()
         "Request headers: ${request.headers}".logD(TAG)
+        "Websocket params : $params".logI(TAG)
 
         webSocket = WebSocketClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {

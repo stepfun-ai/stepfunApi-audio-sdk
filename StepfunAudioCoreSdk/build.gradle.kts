@@ -48,4 +48,5 @@ dependencies {
     api("com.squareup.retrofit2:converter-gson:2.9.0")
 
     implementation("androidx.media3:media3-common-ktx:1.8.0")
+    implementation("androidx.media3:media3-exoplayer:1.5.0")
 }
