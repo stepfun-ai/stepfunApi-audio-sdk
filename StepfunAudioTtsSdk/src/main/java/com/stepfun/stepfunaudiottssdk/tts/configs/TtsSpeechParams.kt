@@ -10,7 +10,7 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.network.BaseRequest
 
 data class TtsSpeechParams(
     // 必须参数
-    val model: TtsModel,
+    val model: String,
     val input: String,
     val voice: TtsVoice,
 
@@ -23,7 +23,7 @@ data class TtsSpeechParams(
     val pronunciationMap: List<PronunciationMap>? = null
 ) {
     class Builder {
-        private var model: TtsModel? = null
+        private var model: String? = null
         private var input: String = ""
         private var voice: TtsVoice? = null
 
@@ -34,7 +34,7 @@ data class TtsSpeechParams(
         private var sampleRate: Int? = null
         private var pronunciationMap: List<PronunciationMap>? = null
 
-        fun model(model: TtsModel) = apply {
+        fun model(model: String) = apply {
             this.model = model
         }
 
@@ -109,7 +109,7 @@ data class TtsSpeechParams(
 
     internal fun toNetworkRequest() =
         TtsSpeechRequest(
-            model = model.modelId,
+            model = model,
             input = input,
             voice = voice.voiceId,
             responseFormat = responseFormat?.format,

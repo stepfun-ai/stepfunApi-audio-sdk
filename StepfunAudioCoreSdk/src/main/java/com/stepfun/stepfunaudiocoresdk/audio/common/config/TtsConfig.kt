@@ -2,7 +2,7 @@ package com.stepfun.stepfunaudiocoresdk.audio.common.config
 
 data class TtsConfig(
     // 默认模型
-    val defaultModel: TtsModel = TtsModel.STEP_TTS_MINI,
+    val defaultModel: String = TtsModel.STEP_TTS_MINI.modelId,
 
     // 默认音色
     val defaultVoice: TtsVoice = TtsVoice.STEP_TTS_MINI_DEFAULT,

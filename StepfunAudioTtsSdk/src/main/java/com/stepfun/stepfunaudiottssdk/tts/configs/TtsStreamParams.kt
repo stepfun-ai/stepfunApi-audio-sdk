@@ -6,7 +6,8 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsModel
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
 
 data class TtsStreamParams(
-    val model: TtsModel,
+//    val model: TtsModel,
+    val model: String,
 //    val voice: TtsVoice,
     val voice: String,
     val responseFormat: TtsAudioFormat = TtsAudioFormat.MP3,
@@ -16,7 +17,7 @@ data class TtsStreamParams(
     val pronunciationMap: List<PronunciationMap>? = null
 ) {
     class Builder {
-        private var model: TtsModel? = null
+        private var model: String? = null
         private var voice: String? = null
         private var responseFormat: TtsAudioFormat = TtsAudioFormat.MP3
         private var sampleRate: Int = 24000
@@ -24,7 +25,7 @@ data class TtsStreamParams(
         private var speedRatio: Float = 1.0f
         private var pronunciationMap: List<PronunciationMap>? = null
 
-        fun model(model: TtsModel) = apply { this.model = model }
+        fun model(model: String) = apply { this.model = model }
         fun voice(voice: String) = apply { this.voice = voice }
         fun responseFormat(format: TtsAudioFormat) = apply { this.responseFormat = format }
         fun sampleRate(rate: Int) = apply {

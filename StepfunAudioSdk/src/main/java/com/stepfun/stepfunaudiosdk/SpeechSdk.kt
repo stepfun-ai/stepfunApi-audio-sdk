@@ -269,6 +269,24 @@ object SpeechSdk {
         fun stopStream() {
             Tts.stopStream()
         }
+
+        /**
+         * 暂停流式播放
+         *
+         * 暂停当前的音频播放
+         */
+        fun pauseStream() {
+            Tts.pauseStream()
+        }
+
+        /**
+         * 恢复流式播放
+         *
+         * 恢复被暂停的音频播放
+         */
+        fun resumeStream() {
+            Tts.resumeStream()
+        }
     }
 
     object ASR {

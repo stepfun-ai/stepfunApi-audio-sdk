@@ -13,6 +13,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlinx.coroutines.*
+import kotlin.concurrent.Volatile
 
 class AudioStreamPlayer(private val context: Context) {
     companion object {
@@ -29,6 +30,9 @@ class AudioStreamPlayer(private val context: Context) {
     private val pcmAudioQueue = ConcurrentLinkedQueue<ByteArray>()
     private var isPcmPlaying = false
     private var pcmPlayJob: Job? = null
+
+    @Volatile
+    private var isPaused = false
 
     private var audioFormat: TtsAudioFormat = TtsAudioFormat.PCM
     private var chunkQueue = ConcurrentLinkedQueue<ByteArray>()
@@ -183,11 +187,28 @@ class AudioStreamPlayer(private val context: Context) {
 
         isPcmPlaying = true
         audioTrack?.play()
+        isPaused = false
         "AudioStreamPlayer started playing".logD(TAG)
 
         pcmPlayJob =
             scope.launch {
                 while (isActive && isPcmPlaying) {
+                    if (isPaused) {
+                        // 仅当正在播放时才暂停
+                        if (audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                            audioTrack?.pause()
+                            "AudioTrack paused".logD(TAG)
+                        }
+                        delay(100)
+                        continue
+                    } else {
+                        // 如果之前暂停了，现在需要恢复播放
+                        if (audioTrack?.playState == AudioTrack.PLAYSTATE_PAUSED) {
+                            audioTrack?.play()
+                            "AudioTrack resumed".logD(TAG)
+                        }
+                    }
+
                     val data = pcmAudioQueue.poll()
                     if (data != null) {
                         audioTrack?.write(data, 0, data.size)
@@ -334,6 +355,7 @@ class AudioStreamPlayer(private val context: Context) {
     fun stop() {
         "Stopping playback".logD(TAG)
 
+        isPaused = false
         // PCM 播放停止
         isPcmPlaying = false
         pcmPlayJob?.cancel()
@@ -364,6 +386,18 @@ class AudioStreamPlayer(private val context: Context) {
         chunkQueue.clear()
 
         cleanupTempFiles()
+    }
+
+    /** 暂停播放 */
+    fun pause() {
+        "Pausing playback".logD(TAG)
+        isPaused = true
+    }
+
+    /** 恢复播放 */
+    fun resume() {
+        "Resuming playback".logD(TAG)
+        isPaused = false
     }
 
     /** 释放资源 */

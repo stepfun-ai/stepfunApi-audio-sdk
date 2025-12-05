@@ -275,4 +275,17 @@ object Tts {
         audioStreamPlayer?.stop()
     }
 
+    /**
+     * 暂停流式播放
+     */
+    fun pauseStream() {
+        audioStreamPlayer?.pause()
+    }
+
+    /**
+     * 恢复流式播放
+     */
+    fun resumeStream() {
+        audioStreamPlayer?.resume()
+    }
 }

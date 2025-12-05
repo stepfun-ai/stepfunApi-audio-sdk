@@ -70,7 +70,7 @@ class TtsStreamClient {
         this.callback = callback
         val config = SpeechCoreSdk.getConfig()
         val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
-        val url = "$wsUrl?model=${params.model.modelId}"
+        val url = "$wsUrl?model=${params.model}"
         "Connecting to WebSocket URL: $url".logD(TAG)
 
         val requestBuilder = Request.Builder().url(url)

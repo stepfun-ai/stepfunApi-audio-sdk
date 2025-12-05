@@ -13,6 +13,7 @@ import com.stepfun.stepfunaudiottssdk.tts.TtsCallback
 import com.stepfun.stepfunaudiottssdk.tts.TtsError
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamCallback
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamError
+import com.stepfun.stepfunaudiottssdk.tts.configs.TtsStreamParams
 
 class MainActivity : AppCompatActivity() {
 
@@ -20,21 +21,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnPlay: Button
     private lateinit var btnStop: Button
     private lateinit var btnStreamPlay: Button
+    private lateinit var btnPauseStream: Button
+    private lateinit var btnResumeStream: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // 1. 简单的 UI 布局
         val layout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             setPadding(50, 200, 50, 50)
         }
-        
+
         etText = EditText(this).apply {
             hint = "请输入要合成的文本"
             setText("你好，我是阶跃星辰语音助手，很高兴为你服务。")
         }
-        
+
         btnPlay = Button(this).apply {
             text = "播放 TTS (非流式)"
         }
@@ -46,11 +49,21 @@ class MainActivity : AppCompatActivity() {
         btnStreamPlay = Button(this).apply {
             text = "播放 TTS (流式)"
         }
-        
+
+        btnPauseStream = Button(this).apply {
+            text = "暂停流式播放"
+        }
+
+        btnResumeStream = Button(this).apply {
+            text = "恢复流式播放"
+        }
+
         layout.addView(etText)
         layout.addView(btnPlay)
         layout.addView(btnStop)
         layout.addView(btnStreamPlay)
+        layout.addView(btnPauseStream)
+        layout.addView(btnResumeStream)
         setContentView(layout)
 
         // 2. 初始化 SDK
@@ -68,6 +81,7 @@ class MainActivity : AppCompatActivity() {
 
         btnStop.setOnClickListener {
             SpeechSdk.TTS.stopPlayback()
+            SpeechSdk.TTS.stopStream()
             Toast.makeText(this, "已停止播放", Toast.LENGTH_SHORT).show()
         }
 
@@ -78,6 +92,16 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "请输入文本", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        btnPauseStream.setOnClickListener {
+            SpeechSdk.TTS.pauseStream()
+            Toast.makeText(this, "已暂停流式播放", Toast.LENGTH_SHORT).show()
+        }
+
+        btnResumeStream.setOnClickListener {
+            SpeechSdk.TTS.resumeStream()
+            Toast.makeText(this, "已恢复流式播放", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -110,7 +134,11 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         btnPlay.isEnabled = true
                         btnPlay.text = "播放 TTS (非流式)"
-                        Toast.makeText(this@MainActivity, "非流式生成成功，正在播放", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "非流式生成成功，正在播放",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
@@ -118,7 +146,11 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         btnPlay.isEnabled = true
                         btnPlay.text = "播放 TTS (非流式)"
-                        Toast.makeText(this@MainActivity, "错误: ${error.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "错误: ${error.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             }
@@ -132,28 +164,36 @@ class MainActivity : AppCompatActivity() {
         // 1. 创建流式会话
         SpeechSdk.TTS.createStreamSession(
             context = this,
-            voice = TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG.voiceId,
+            params = TtsStreamParams(
+                model = "step-tts-2",
+                voice = TtsVoice.STEP_TTS_MINI_WENROUNANSHENG.voiceId
+            ),
             callback = object : TtsStreamCallback {
                 override fun onConnectionEstablished(sessionId: String) {
-                   runOnUiThread {
-                       Toast.makeText(this@MainActivity, "连接成功", Toast.LENGTH_SHORT).show()
-                   }
+//                   runOnUiThread {
+//                       Toast.makeText(this@MainActivity, "连接成功", Toast.LENGTH_SHORT).show()
+//                   }
                 }
 
                 override fun onSessionCreated(sessionId: String) {
-                    runOnUiThread {
-                        btnStreamPlay.text = "发送文本..."
-                        // 2. 会话创建成功后，发送文本
-                        SpeechSdk.TTS.sendStreamText(text)
-                        // 3. 发送完毕后，通知结束（如果是单句播放）
-                        SpeechSdk.TTS.finishStream()
-                    }
+//                    runOnUiThread {
+//                        btnStreamPlay.text = "发送文本..."
+//                         2. 会话创建成功后，发送文本
+//                        SpeechSdk.TTS.sendStreamText(text)
+//                         3. 发送完毕后，通知结束（如果是单句播放）
+//                        SpeechSdk.TTS.finishStream()
+//                    }
+//                  2. 会话创建成功后，发送文本
+                    SpeechSdk.TTS.sendStreamText(text)
+//                  3. 发送完毕后，通知结束（如果是单句播放）
+                    SpeechSdk.TTS.finishStream()
                 }
 
                 override fun onSentenceStart(text: String) {
-                    runOnUiThread {
-                        Toast.makeText(this@MainActivity, "开始播放: $text", Toast.LENGTH_SHORT).show()
-                    }
+//                    runOnUiThread {
+//                        Toast.makeText(this@MainActivity, "开始播放: $text", Toast.LENGTH_SHORT)
+//                            .show()
+//                    }
                 }
 
                 override fun onAudioData(audioData: ByteArray, isFinished: Boolean) {
@@ -161,7 +201,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onSentenceEnd(text: String) {
-                   // 单句结束
+                    // 单句结束
                 }
 
                 override fun onFlushed() {
@@ -169,24 +209,28 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onComplete() {
-                    runOnUiThread {
-                        btnStreamPlay.isEnabled = true
-                        btnStreamPlay.text = "播放 TTS (流式)"
-                        Toast.makeText(this@MainActivity, "流式播放完成", Toast.LENGTH_SHORT).show()
-                    }
+//                    runOnUiThread {
+//                        btnStreamPlay.isEnabled = true
+//                        btnStreamPlay.text = "播放 TTS (流式)"
+//                        Toast.makeText(this@MainActivity, "流式播放完成", Toast.LENGTH_SHORT).show()
+//                    }
                 }
 
                 override fun onError(error: TtsStreamError) {
-                    runOnUiThread {
-                        btnStreamPlay.isEnabled = true
-                        btnStreamPlay.text = "播放 TTS (流式)"
-                        Toast.makeText(this@MainActivity, "流式错误: ${error.message}", Toast.LENGTH_LONG).show()
-                    }
+//                    runOnUiThread {
+//                        btnStreamPlay.isEnabled = true
+//                        btnStreamPlay.text = "播放 TTS (流式)"
+//                        Toast.makeText(
+//                            this@MainActivity,
+//                            "流式错误: ${error.message}",
+//                            Toast.LENGTH_LONG
+//                        ).show()
+//                    }
                 }
             }
         )
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         // 释放资源

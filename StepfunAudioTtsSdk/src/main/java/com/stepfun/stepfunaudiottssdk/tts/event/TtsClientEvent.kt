@@ -19,6 +19,11 @@ data class TtsCreateEvent(val data: CreateData) : TtsClientEvent("tts.create") {
         @SerializedName("volume_ratio") val volumeRatio: Float = 1.0f,
         @SerializedName("speed_ratio") val speedRatio: Float = 1.0f,
         @SerializedName("pronunciation_map") val pronunciationMap: List<PronunciationMap>? = null,
+        @SerializedName("features") val features: Features? = null,
+    )
+
+    data class Features(
+        @SerializedName("enable_markdown_filter") val enableMarkdownFilter: Boolean? = false,
     )
 
     override fun toJson(): String {
