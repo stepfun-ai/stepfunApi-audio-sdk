@@ -12,8 +12,14 @@ object SpeechCoreSdk {
         if (isInitialized) {
             return
         }
-        HttpClient.init(context, config)
-        WebSocketClient.init(context, config)
+        val httpUrl = config.httpBaseUrl
+        if (httpUrl.isNotEmpty()) {
+            HttpClient.init(context, config)
+        }
+        val wsUrl = config.webSocketUrl
+        if (wsUrl.isNotEmpty()) {
+            WebSocketClient.init(context, config)
+        }
         speechConfig = config
         isInitialized = true
     }

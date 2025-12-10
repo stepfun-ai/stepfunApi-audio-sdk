@@ -231,6 +231,7 @@ val params = TtsStreamParams.Builder()
     .sampleRate(24000)                   // 8000/16000/24000
     .speedRatio(1.0f)                    // 语速 0.5-2.0
     .volumeRatio(1.0f)                   // 音量 0.1-2.0
+    .mode("sentence")
     .build()
 
 SpeechSdk.TTS.createStreamSession(

@@ -26,7 +26,10 @@ data class TtsConfig(
     val enableCache: Boolean = false,
 
     // 缓存目录
-    val cacheDir: String? = null
+    val cacheDir: String? = null,
+
+    //模式
+    val mode: String = "default"
 
 )
 

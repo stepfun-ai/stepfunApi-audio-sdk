@@ -18,6 +18,7 @@ data class TtsCreateEvent(val data: CreateData) : TtsClientEvent("tts.create") {
         @SerializedName("sample_rate") val sampleRate: Int? = TtsSampleRate.RATE_24000.rate,
         @SerializedName("volume_ratio") val volumeRatio: Float = 1.0f,
         @SerializedName("speed_ratio") val speedRatio: Float = 1.0f,
+        @SerializedName("mode") val mode: String = "default",
         @SerializedName("pronunciation_map") val pronunciationMap: List<PronunciationMap>? = null,
         @SerializedName("features") val features: Features? = null,
     )

@@ -218,6 +218,7 @@ object SpeechSdk {
                 .responseFormat(config.defaultResponseFormat)
                 .sampleRate(config.defaultSampleRate)
                 .speedRatio(config.defaultSpeed)
+                .mode(config.mode)
                 .volumeRatio(config.defaultVolume)
                 .build()
 

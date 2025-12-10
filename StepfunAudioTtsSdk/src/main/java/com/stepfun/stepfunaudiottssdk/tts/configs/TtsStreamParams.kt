@@ -15,6 +15,7 @@ data class TtsStreamParams(
     val sampleRate: Int = 24000,
     val volumeRatio: Float = 1.0f,
     val speedRatio: Float = 1.0f,
+    val mode: String = "default",
     val features: TtsCreateEvent.Features? = null,
     val pronunciationMap: List<PronunciationMap>? = null
 ) {
@@ -25,6 +26,7 @@ data class TtsStreamParams(
         private var sampleRate: Int = 24000
         private var volumeRatio: Float = 1.0f
         private var speedRatio: Float = 1.0f
+        private var mode: String = "default"
         private var pronunciationMap: List<PronunciationMap>? = null
         private var features: TtsCreateEvent.Features? = null
 
@@ -48,6 +50,10 @@ data class TtsStreamParams(
             this.speedRatio = ratio
         }
 
+        fun mode(mode: String) = apply {
+            this.model = mode
+        }
+
         fun pronunciationMap(map: List<PronunciationMap>) = apply {
             this.pronunciationMap = map
         }
@@ -66,6 +72,7 @@ data class TtsStreamParams(
                 sampleRate = sampleRate,
                 volumeRatio = volumeRatio,
                 speedRatio = speedRatio,
+                mode = mode,
                 pronunciationMap = pronunciationMap,
                 features = features
             )

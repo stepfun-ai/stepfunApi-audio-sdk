@@ -171,6 +171,7 @@ class MainActivity : AppCompatActivity() {
                 model = TtsModel.STEP_TTS_MINI.modelId,
                 voice = TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG.voiceId,
                 responseFormat = TtsAudioFormat.PCM,
+                mode = "sentence",
                 features = TtsCreateEvent.Features(
                     enableMarkdownFilter = true
                 )

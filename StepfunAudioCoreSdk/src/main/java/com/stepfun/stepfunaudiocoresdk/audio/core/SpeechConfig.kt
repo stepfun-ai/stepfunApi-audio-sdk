@@ -53,16 +53,10 @@ data class SpeechConfig(
 //        }
 
         fun httpBaseUrl(url: String) = apply {
-            require(url.isNotEmpty()) {
-                "http Url cannot be empty"
-            }
             this.httpBaseUel = url
         }
 
         fun webSocketUrl(url: String) = apply {
-            require(url.isNotEmpty()) {
-                "websocket Url cannot be empty"
-            }
             this.webSocketUrl = url
         }
 
