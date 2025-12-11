@@ -164,23 +164,23 @@ class MainActivity : AppCompatActivity() {
         btnStreamPlay.isEnabled = false
         btnStreamPlay.text = "流式连接中..."
 
+        val params = TtsStreamParams.Builder().model(TtsModel.STEP_TTS_MINI.modelId)
+            .voice(TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG.voiceId).responseFormat(TtsAudioFormat.PCM)
+            .mode("sentence").features(
+            TtsCreateEvent.Features(
+                enableMarkdownFilter = true
+            )
+        ).build()
+
         // 1. 创建流式会话
         SpeechSdk.TTS.createStreamSession(
             context = this,
-            params = TtsStreamParams(
-                model = TtsModel.STEP_TTS_MINI.modelId,
-                voice = TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG.voiceId,
-                responseFormat = TtsAudioFormat.PCM,
-                mode = "sentence",
-                features = TtsCreateEvent.Features(
-                    enableMarkdownFilter = true
-                )
-            ),
+            params = params,
             callback = object : TtsStreamCallback {
                 override fun onConnectionEstablished(sessionId: String) {
-                   runOnUiThread {
-                       Toast.makeText(this@MainActivity, "连接成功", Toast.LENGTH_SHORT).show()
-                   }
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "连接成功", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
                 override fun onSessionCreated(sessionId: String) {

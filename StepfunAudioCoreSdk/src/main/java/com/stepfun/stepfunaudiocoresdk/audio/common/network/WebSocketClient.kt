@@ -1,6 +1,12 @@
 package com.stepfun.stepfunaudiocoresdk.audio.common.network
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import com.stepfun.stepfunaudiocoresdk.audio.common.logger.COMMON_TAG
+import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logI
+import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechConfig
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
@@ -9,16 +15,19 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okhttp3.logging.HttpLoggingInterceptor
-import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechConfig
 import java.util.concurrent.TimeUnit
 
 /**
  * WebSocket 客户端管理器
  * 负责创建和配置 WebSocket 连接
- *
+ *`
  * 类似 HttpClient，提供统一的 WebSocket 配置和管理
  */
 object WebSocketClient {
+
+    private const val TAG = COMMON_TAG + "WebSocketClient"
+
+    private lateinit var applicationContext: Context
 
     private const val DEFAULT_CONNECT_TIMEOUT = 15L
     private const val DEFAULT_READ_TIMEOUT = 70L  // 60秒空闲超时 + 10秒缓冲
@@ -33,7 +42,9 @@ object WebSocketClient {
      * 通常在 SpeechCoreSdk.init() 中调用
      */
     fun init(context: Context, config: SpeechConfig) {
+        "初始化 WebSocketClient".logI(TAG)
 //        apiKey = config.apiKey
+        applicationContext = context
 
         if (okHttpClient == null) {
 //            okHttpClient = buildWebSocketClient(context, config.apiKey)
@@ -45,7 +56,7 @@ object WebSocketClient {
      * 检查是否已初始化
      */
     fun isInitialized(): Boolean {
-        return okHttpClient != null
+        return WebSocketClient::applicationContext.isInitialized
     }
 
     /**
@@ -91,7 +102,7 @@ object WebSocketClient {
             .retryOnConnectionFailure(true)
             // 网络检查拦截器
             .addInterceptor { chain ->
-                if (!NetworkManager.isNetworkAvailable()) {
+                if (!isNetworkAvailable()) {
                     return@addInterceptor Response.Builder()
                         .request(chain.request())
                         .protocol(Protocol.HTTP_1_1)
@@ -132,5 +143,21 @@ object WebSocketClient {
         okHttpClient?.dispatcher?.executorService?.shutdown()
         okHttpClient?.connectionPool?.evictAll()
         okHttpClient = null
+    }
+
+    @SuppressLint("MissingPermission")
+    fun isNetworkAvailable(): Boolean {
+        if (isInitialized().not()) {
+            "网络不可用".logI(TAG)
+            return false
+        }
+        val connectivityManager =
+            applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager
+            .getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 }

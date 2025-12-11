@@ -51,7 +51,7 @@ data class TtsStreamParams(
         }
 
         fun mode(mode: String) = apply {
-            this.model = mode
+            this.mode = mode
         }
 
         fun pronunciationMap(map: List<PronunciationMap>) = apply {

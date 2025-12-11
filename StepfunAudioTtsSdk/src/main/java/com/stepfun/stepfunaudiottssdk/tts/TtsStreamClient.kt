@@ -7,6 +7,7 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.config.PronunciationMap
 import com.stepfun.stepfunaudiocoresdk.audio.common.logger.COMMON_TAG
 import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logD
 import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logI
+import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logW
 import com.stepfun.stepfunaudiocoresdk.audio.common.network.WebSocketClient
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamCallback
 import com.stepfun.stepfunaudiottssdk.tts.callbacks.TtsStreamError
@@ -72,6 +73,7 @@ class TtsStreamClient {
         val config = SpeechCoreSdk.getConfig()
         val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
         val url = "$wsUrl&model=${params.model}"
+//        val url = "$wsUrl?model=${params.model}"
         "Connecting to WebSocket URL: $url".logD(TAG)
 
         val requestBuilder = Request.Builder().url(url)

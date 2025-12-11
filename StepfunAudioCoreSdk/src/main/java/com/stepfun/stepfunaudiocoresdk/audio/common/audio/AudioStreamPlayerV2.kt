@@ -27,7 +27,7 @@ import kotlin.concurrent.Volatile
 
 class AudioStreamPlayerV2(private val context: Context) {
     companion object {
-        private const val TAG = COMMON_TAG + "AudioStreamPlayer"
+        private const val TAG = COMMON_TAG + "AudioStreamPlayerV2"
     }
 
     // ========== PCM 播放相关 ==========
@@ -41,6 +41,9 @@ class AudioStreamPlayerV2(private val context: Context) {
 
     @Volatile
     private var isPaused = false
+
+    @Volatile
+    private var isStopped = false
 
     // ========== ExoPlayer Chunk 播放相关 ==========
     private var audioFormat: TtsAudioFormat = TtsAudioFormat.PCM
@@ -67,7 +70,7 @@ class AudioStreamPlayerV2(private val context: Context) {
     ) {
         this.sampleRate = sampleRate
         this.audioFormat = format
-
+        isStopped = false
         when (this.audioFormat) {
             TtsAudioFormat.PCM -> initPcmPlayer()
             else -> initExoPlayer()
@@ -143,6 +146,12 @@ class AudioStreamPlayerV2(private val context: Context) {
 
     /** 添加音频数据到队列 */
     fun addAudioData(data: ByteArray) {
+
+        if (isStopped) {
+            "AudioStreamPlayer is stopped, ignoring audio data".logD(TAG)
+            return
+        }
+        
         if (data.isEmpty()) {
             "Ignoring empty audio data".logD(TAG)
             return
@@ -276,6 +285,7 @@ class AudioStreamPlayerV2(private val context: Context) {
         "Stopping playback".logD(TAG)
 
         isPaused = false
+        isStopped = true
 
         // PCM 播放停止
         isPcmPlaying = false
