@@ -6,6 +6,7 @@ import com.stepfun.stepfunaudioasrsdk.asr.AsrCallback
 import com.stepfun.stepfunaudioasrsdk.asr.AsrError
 import com.stepfun.stepfunaudioasrsdk.asr.AsrError.Companion.ERROR_UNKNOWN
 import com.stepfun.stepfunaudioasrsdk.asr.AsrParams
+import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioPlaybackCallback
 import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioPlayer
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
 import com.stepfun.stepfunaudiottssdk.tts.Tts
@@ -191,9 +192,10 @@ object SpeechSdk {
         fun createStreamSession(
             context: Context,
             params: TtsStreamParams,
-            callback: TtsStreamCallback
+            callback: TtsStreamCallback,
+            playbackCallback: AudioPlaybackCallback? = null
         ) {
-            Tts.createStreamSession(context, params, callback)
+            Tts.createStreamSession(context, params, callback, playbackCallback)
         }
 
         /**
@@ -208,7 +210,8 @@ object SpeechSdk {
         fun createStreamSession(
             context: Context,
             voice: String = TtsVoice.STEP_TTS_MINI_DEFAULT.voiceId,
-            callback: TtsStreamCallback
+            callback: TtsStreamCallback,
+            playbackCallback: AudioPlaybackCallback? = null
         ) {
             val config = SpeechCoreSdk.getConfig().ttsConfig
 
@@ -222,7 +225,7 @@ object SpeechSdk {
                 .volumeRatio(config.defaultVolume)
                 .build()
 
-            Tts.createStreamSession(context, params, callback)
+            Tts.createStreamSession(context, params, callback, playbackCallback)
         }
 
         /**

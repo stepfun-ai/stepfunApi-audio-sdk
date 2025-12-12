@@ -52,11 +52,17 @@ class AudioStreamPlayerV2(private val context: Context) {
 
     // ExoPlayer 实例
     private var exoPlayer: ExoPlayer? = null
+
     @Volatile
     private var isExoPlayerBusy = false
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var playbackCallback: AudioPlaybackCallback? = null
+
+    // 用于检测播放完成的标记
+    @Volatile
+    private var isStreamFinished = false  // 流是否已结束（不再有新数据）
 
     /**
      * 初始化播放器
@@ -71,12 +77,29 @@ class AudioStreamPlayerV2(private val context: Context) {
         this.sampleRate = sampleRate
         this.audioFormat = format
         isStopped = false
+        isStreamFinished = false
+
         when (this.audioFormat) {
             TtsAudioFormat.PCM -> initPcmPlayer()
             else -> initExoPlayer()
         }
         "AudioStreamPlayer initialized with format: $audioFormat, sampleRate: $sampleRate".logI(TAG)
     }
+
+    /**
+     * 设置播放状态回调
+     */
+    fun setPlaybackCallback(callback: AudioPlaybackCallback?) {
+        this.playbackCallback = callback
+    }
+
+    /**
+     * 标记流结束，用于检测播放完成
+     */
+    fun markStreamFinished() {
+        isStreamFinished = true
+    }
+
 
     /** 初始化 PCM 播放器 */
     private fun initPcmPlayer() {
@@ -124,12 +147,15 @@ class AudioStreamPlayerV2(private val context: Context) {
                     // 播放完成后，尝试播放下一个 chunk
                     playNextChunkIfAvailable()
                 }
+
                 Player.STATE_READY -> {
                     "ExoPlayer ready".logD(TAG)
                 }
+
                 Player.STATE_BUFFERING -> {
                     "ExoPlayer buffering".logD(TAG)
                 }
+
                 Player.STATE_IDLE -> {
                     "ExoPlayer idle".logD(TAG)
                 }
@@ -151,7 +177,7 @@ class AudioStreamPlayerV2(private val context: Context) {
             "AudioStreamPlayer is stopped, ignoring audio data".logD(TAG)
             return
         }
-        
+
         if (data.isEmpty()) {
             "Ignoring empty audio data".logD(TAG)
             return
@@ -159,7 +185,9 @@ class AudioStreamPlayerV2(private val context: Context) {
         when (audioFormat) {
             TtsAudioFormat.PCM -> {
                 pcmAudioQueue.offer(data)
-                "AudioStreamPlayer added PCM data, size: ${data.size}, queue size: ${pcmAudioQueue.size}".logD(TAG)
+                "AudioStreamPlayer added PCM data, size: ${data.size}, queue size: ${pcmAudioQueue.size}".logD(
+                    TAG
+                )
 
                 if (!isPcmPlaying) {
                     startPcmPlayback()
@@ -168,7 +196,9 @@ class AudioStreamPlayerV2(private val context: Context) {
 
             else -> {
                 chunkQueue.offer(data)
-                "AudioStreamPlayer added chunk data, size: ${data.size}, queue size: ${chunkQueue.size}".logD(TAG)
+                "AudioStreamPlayer added chunk data, size: ${data.size}, queue size: ${chunkQueue.size}".logD(
+                    TAG
+                )
 
                 if (!isChunkPlaying) {
                     isChunkPlaying = true
@@ -189,6 +219,8 @@ class AudioStreamPlayerV2(private val context: Context) {
         audioTrack?.play()
         isPaused = false
         "AudioStreamPlayer started playing".logD(TAG)
+
+        mainHandler.post { playbackCallback?.onPlaybackStarted() }
 
         pcmPlayJob =
             scope.launch {
@@ -211,6 +243,14 @@ class AudioStreamPlayerV2(private val context: Context) {
                     if (data != null) {
                         audioTrack?.write(data, 0, data.size)
                     } else {
+                        // 队列为空
+                        if (isStreamFinished) {
+                            // 流已结束且队列为空，播放完成
+                            "Playback completed".logD(TAG)
+                            isPcmPlaying = false
+                            mainHandler.post { playbackCallback?.onPlaybackCompleted() }
+                            break
+                        }
                         delay(10)
                     }
                 }
@@ -302,6 +342,7 @@ class AudioStreamPlayerV2(private val context: Context) {
         mainHandler.post {
             exoPlayer?.stop()
             exoPlayer?.clearMediaItems()
+            playbackCallback?.onPlaybackStopped()
         }
     }
 
@@ -311,6 +352,7 @@ class AudioStreamPlayerV2(private val context: Context) {
         isPaused = true
         mainHandler.post {
             exoPlayer?.pause()
+            playbackCallback?.onPlaybackPaused()
         }
     }
 
@@ -319,9 +361,11 @@ class AudioStreamPlayerV2(private val context: Context) {
         "Resuming playback".logD(TAG)
         isPaused = false
         mainHandler.post {
+            playbackCallback?.onPlaybackResumed()
             // 如果 ExoPlayer 有正在播放的内容，恢复它
-            if (exoPlayer?.playbackState == Player.STATE_READY || 
-                exoPlayer?.playbackState == Player.STATE_BUFFERING) {
+            if (exoPlayer?.playbackState == Player.STATE_READY ||
+                exoPlayer?.playbackState == Player.STATE_BUFFERING
+            ) {
                 exoPlayer?.play()
             } else {
                 // 否则尝试播放队列中的下一个

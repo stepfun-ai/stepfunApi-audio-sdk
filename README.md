@@ -10,6 +10,7 @@
    - [一次性生成](#一次性生成)
    - [生成并播放](#生成并播放)
    - [流式 TTS](#流式-tts)
+   - [播放状态回调](#播放状态回调)
 4. [ASR 语音识别](#asr-语音识别)
    - [识别音频文件](#识别音频文件)
    - [录音并识别](#录音并识别)
@@ -272,6 +273,28 @@ SpeechSdk.TTS.createStreamSession(
         override fun onError(error: TtsStreamError) {
             Log.e("TTS", "错误: ${error.code} - ${error.message}")
         }
+    },
+    // 播放状态回调（可选）
+    playbackCallback = object : AudioPlaybackCallback {
+        override fun onPlaybackStarted() {
+            Log.d("TTS", "开始播放")
+        }
+
+        override fun onPlaybackPaused() {
+            Log.d("TTS", "播放已暂停")
+        }
+
+        override fun onPlaybackResumed() {
+            Log.d("TTS", "播放已恢复")
+        }
+
+        override fun onPlaybackStopped() {
+            Log.d("TTS", "播放已停止")
+        }
+
+        override fun onPlaybackCompleted() {
+            Log.d("TTS", "播放完成（所有音频播放完毕）")
+        }
     }
 )
 ```
@@ -282,9 +305,51 @@ SpeechSdk.TTS.createStreamSession(
 SpeechSdk.TTS.createStreamSession(
     context = this,
     voice = TtsVoice.STEP_TTS_MINI_DEFAULT.voiceId,
-    callback = streamCallback
+    callback = streamCallback,
+    playbackCallback = playbackCallback  // 可选
 )
 ```
+
+#### 播放状态回调
+
+流式 TTS 支持播放状态回调，可以监听音频播放的各个阶段：
+
+```kotlin
+val playbackCallback = object : AudioPlaybackCallback {
+    override fun onPlaybackStarted() {
+        // 开始播放第一帧音频时触发
+        updateUI("正在播放...")
+    }
+
+    override fun onPlaybackPaused() {
+        // 调用 pauseStream() 后触发
+        updateUI("已暂停")
+    }
+
+    override fun onPlaybackResumed() {
+        // 调用 resumeStream() 后触发
+        updateUI("继续播放...")
+    }
+
+    override fun onPlaybackStopped() {
+        // 调用 stopStream() 后触发
+        updateUI("已停止")
+    }
+
+    override fun onPlaybackCompleted() {
+        // 所有音频数据播放完成时触发
+        updateUI("播放完成")
+    }
+}
+```
+
+| 回调方法 | 触发时机 |
+|---------|---------|
+| `onPlaybackStarted()` | 开始播放第一帧音频 |
+| `onPlaybackPaused()` | 调用 `pauseStream()` 暂停播放 |
+| `onPlaybackResumed()` | 调用 `resumeStream()` 恢复播放 |
+| `onPlaybackStopped()` | 调用 `stopStream()` 停止播放 |
+| `onPlaybackCompleted()` | 所有音频播放完毕（流结束且队列清空） |
 
 #### 流式控制方法
 
@@ -573,11 +638,33 @@ class TtsActivity : AppCompatActivity() {
                 override fun onSentenceEnd(text: String) {}
                 override fun onFlushed() {}
                 override fun onComplete() {
-                    Log.d("TTS", "播放完成")
+                    Log.d("TTS", "生成完成")
                 }
                 
                 override fun onError(error: TtsStreamError) {
                     Log.e("TTS", "错误: ${error.message}")
+                }
+            },
+            // 播放状态回调
+            playbackCallback = object : AudioPlaybackCallback {
+                override fun onPlaybackStarted() {
+                    runOnUiThread { binding.statusText.text = "正在播放..." }
+                }
+
+                override fun onPlaybackPaused() {
+                    runOnUiThread { binding.statusText.text = "已暂停" }
+                }
+
+                override fun onPlaybackResumed() {
+                    runOnUiThread { binding.statusText.text = "继续播放..." }
+                }
+
+                override fun onPlaybackStopped() {
+                    runOnUiThread { binding.statusText.text = "已停止" }
+                }
+
+                override fun onPlaybackCompleted() {
+                    runOnUiThread { binding.statusText.text = "播放完成" }
                 }
             }
         )

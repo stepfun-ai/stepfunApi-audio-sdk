@@ -1,6 +1,7 @@
 package com.stepfun.stepfunaudiottssdk.tts
 
 import android.content.Context
+import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioPlaybackCallback
 import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioPlayer
 import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioStreamPlayerV2
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
@@ -68,6 +69,7 @@ object Tts {
     fun generateSpeech(params: TtsSpeechParams, callback: TtsCallback) {
         getClient().generateSpeech(params, callback)
     }
+
     /**
      * 生成语音（协程异步方式）
      */
@@ -89,9 +91,9 @@ object Tts {
 
     /**
      * 生成语音并播放（便捷方法）
-     * 
+     *
      * 这是一个便捷方法，自动完成"生成 → 播放"的流程
-     * 
+     *
      * @param context 上下文
      * @param params TTS参数
      * @param callback TTS生成回调
@@ -107,7 +109,7 @@ object Tts {
             override fun onSuccess(audioData: ByteArray) {
                 // 通知 TTS 生成成功
                 callback?.onSuccess(audioData)
-                
+
                 // 自动播放
                 val format = params.responseFormat?.format ?: "mp3"
                 getAudioPlayer(context).playFromByteArray(
@@ -125,9 +127,9 @@ object Tts {
 
     /**
      * 快速生成并播放（使用默认配置）
-     * 
+     *
      * 最简单的使用方式，适合快速测试和简单场景
-     * 
+     *
      * @param context 上下文
      * @param text 要合成的文本
      * @param voice 音色
@@ -142,7 +144,7 @@ object Tts {
         playbackCallback: AudioPlayer.PlaybackCallback? = null
     ) {
         val config = SpeechCoreSdk.getConfig().ttsConfig
-        
+
         val params = TtsSpeechParams.Builder()
             .model(config.defaultModel)
             .input(text)
@@ -177,7 +179,7 @@ object Tts {
     fun release() {
         ttsClient?.release()
         ttsClient = null
-        
+
         audioPlayer?.release()
         audioPlayer = null
 
@@ -195,7 +197,8 @@ object Tts {
     fun createStreamSession(
         context: Context,
         params: TtsStreamParams,
-        callback: TtsStreamCallback
+        callback: TtsStreamCallback,
+        playbackCallback: AudioPlaybackCallback? = null
     ) {
         // 释放旧的流式客户端
         ttsStreamClient?.release()
@@ -205,6 +208,7 @@ object Tts {
         ttsStreamClient = TtsStreamClient()
         audioStreamPlayer = AudioStreamPlayerV2(context.applicationContext).apply {
             initialize(params.sampleRate, params.responseFormat)
+            setPlaybackCallback(playbackCallback)
         }
 
         // 连接并创建会话
@@ -236,6 +240,7 @@ object Tts {
             }
 
             override fun onComplete() {
+                audioStreamPlayer?.markStreamFinished()
                 callback.onComplete()
             }
 

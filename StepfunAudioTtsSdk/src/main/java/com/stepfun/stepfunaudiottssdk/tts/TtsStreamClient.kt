@@ -72,7 +72,7 @@ class TtsStreamClient {
         this.callback = callback
         val config = SpeechCoreSdk.getConfig()
         val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
-        val url = "$wsUrl&model=${params.model}"
+        val url = "$wsUrl?model=${params.model}"
 //        val url = "$wsUrl?model=${params.model}"
         "Connecting to WebSocket URL: $url".logD(TAG)
 
@@ -160,6 +160,7 @@ class TtsStreamClient {
             scope.launch {
                 when (type) {
                     "tts.connection.done" -> {
+                        "处理 服务端事件: tts.connection.done".logD(TAG)
                         val event = gson.fromJson(message, TtsConnectionDoneEvent::class.java)
                         sessionId = event.data.sessionId
                         callback?.onConnectionEstablished(event.data.sessionId)
@@ -169,17 +170,20 @@ class TtsStreamClient {
                     }
 
                     "tts.response.created" -> {
+                        "处理 服务端事件: tts.response.created".logD(TAG)
                         val event = gson.fromJson(message, TtsResponseCreatedEvent::class.java)
                         callback?.onSessionCreated(event.data.sessionId)
                     }
 
                     "tts.response.sentence.start" -> {
+                        "处理 服务端事件: tts.response.sentence.start".logD(TAG)
                         val event =
                             gson.fromJson(message, TtsResponseSentenceStartEvent::class.java)
                         callback?.onSentenceStart(event.data.text)
                     }
 
                     "tts.response.audio.delta" -> {
+                        "处理 服务端事件: tts.response.audio.delta".logD(TAG)
                         val event = gson.fromJson(message, TtsResponseAudioDeltaEvent::class.java)
                         val audioData = Base64.decode(event.data.audio, Base64.DEFAULT)
                         val isFinished = event.data.status == "finished"
@@ -187,21 +191,25 @@ class TtsStreamClient {
                     }
 
                     "tts.response.sentence.end" -> {
+                        "处理 服务端事件: tts.response.sentence.end".logD(TAG)
                         val event = gson.fromJson(message, TtsResponseSentenceEndEvent::class.java)
                         callback?.onSentenceEnd(event.data.text)
                     }
 
                     "tts.text.flushed" -> {
+                        "处理 服务端事件: tts.text.flushed".logD(TAG)
                         callback?.onFlushed()
                     }
 
                     "tts.response.audio.done" -> {
+                        "处理 服务端事件: tts.response.audio.done".logD(TAG)
                         // 状态已在上面同步设置
-                        callback?.onComplete()
+//                        callback?.onComplete()
                         close()
                     }
 
                     "tts.response.error" -> {
+                        "处理 服务端事件: tts.response.error".logD(TAG)
                         val event = gson.fromJson(message, TtsResponseErrorEvent::class.java)
                         callback?.onError(
                             TtsStreamError(

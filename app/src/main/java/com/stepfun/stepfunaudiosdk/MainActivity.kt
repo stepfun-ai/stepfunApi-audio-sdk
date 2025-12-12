@@ -1,13 +1,17 @@
 package com.stepfun.stepfunaudiosdk
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.stepfun.stepfunaudiocoresdk.audio.common.audio.AudioPlaybackCallback
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsAudioFormat
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsModel
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
+import com.stepfun.stepfunaudiocoresdk.audio.common.logger.COMMON_TAG
+import com.stepfun.stepfunaudiocoresdk.audio.common.logger.logI
 import com.stepfun.stepfunaudiocoresdk.audio.core.Environment
 import com.stepfun.stepfunaudiocoresdk.audio.core.SpeechConfig
 import com.stepfun.stepfunaudiosdk.SpeechSdk
@@ -19,6 +23,10 @@ import com.stepfun.stepfunaudiottssdk.tts.configs.TtsStreamParams
 import com.stepfun.stepfunaudiottssdk.tts.event.TtsCreateEvent
 
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG = "DEMO"
+    }
 
     private lateinit var etText: EditText
     private lateinit var btnPlay: Button
@@ -213,6 +221,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onComplete() {
+                    "流式数据传输完成".logI(COMMON_TAG)
                     runOnUiThread {
                         btnStreamPlay.isEnabled = true
                         btnStreamPlay.text = "播放 TTS (流式)"
@@ -230,6 +239,29 @@ class MainActivity : AppCompatActivity() {
                             Toast.LENGTH_LONG
                         ).show()
                     }
+                }
+            },
+            playbackCallback = object : AudioPlaybackCallback {
+                override fun onPlaybackStarted() {
+                    // 更新 UI，如显示播放动画
+                    "开始播放".logI(TAG)
+                }
+
+                override fun onPlaybackPaused() {
+                    "暂停播放".logI(TAG)
+                }
+
+                override fun onPlaybackResumed() {
+                    "恢复播放".logI(TAG)
+                }
+
+                override fun onPlaybackStopped() {
+                    "停止播放".logI(TAG)
+                }
+
+                override fun onPlaybackCompleted() {
+                    // 所有音频数据已播放完毕
+                    "播放完成".logI(TAG)
                 }
             }
         )
