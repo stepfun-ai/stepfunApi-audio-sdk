@@ -5,9 +5,11 @@ import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsAudioFormat
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsModel
 import com.stepfun.stepfunaudiocoresdk.audio.common.config.TtsVoice
 import com.stepfun.stepfunaudiottssdk.tts.event.TtsCreateEvent
+import okhttp3.Headers
 
 data class TtsStreamParams(
 //    val model: TtsModel,
+    val url: String,
     val model: String,
 //    val voice: TtsVoice,
     val voice: String,
@@ -17,9 +19,11 @@ data class TtsStreamParams(
     val speedRatio: Float = 1.0f,
     val mode: String = "default",
     val features: TtsCreateEvent.Features? = null,
-    val pronunciationMap: List<PronunciationMap>? = null
+    val pronunciationMap: List<PronunciationMap>? = null,
+    val customHeaders: Map<String, String> = emptyMap()
 ) {
     class Builder {
+        private var url: String = ""
         private var model: String? = null
         private var voice: String? = null
         private var responseFormat: TtsAudioFormat = TtsAudioFormat.MP3
@@ -29,6 +33,11 @@ data class TtsStreamParams(
         private var mode: String = "default"
         private var pronunciationMap: List<PronunciationMap>? = null
         private var features: TtsCreateEvent.Features? = null
+        private var customHeader: Map<String, String> = emptyMap()
+
+        fun url(url: String) = apply {
+            this.url = url
+        }
 
         fun model(model: String) = apply { this.model = model }
         fun voice(voice: String) = apply { this.voice = voice }
@@ -62,10 +71,15 @@ data class TtsStreamParams(
             this.features = features
         }
 
+        fun customHeader(headers: Map<String, String>) = apply {
+            this.customHeader = headers
+        }
+
         fun build(): TtsStreamParams {
             requireNotNull(model) { "model is required" }
             requireNotNull(voice) { "voice is required" }
             return TtsStreamParams(
+                url = url,
                 model = model!!,
                 voice = voice!!,
                 responseFormat = responseFormat,
@@ -74,7 +88,8 @@ data class TtsStreamParams(
                 speedRatio = speedRatio,
                 mode = mode,
                 pronunciationMap = pronunciationMap,
-                features = features
+                features = features,
+                customHeaders = customHeader
             )
         }
     }

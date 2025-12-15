@@ -65,7 +65,7 @@ data class SpeechConfig(
         fun ttsConfig(config: TtsConfig) = apply { this.ttsConfig = config }
         fun asrConfig(config: AsrConfig) = apply { this.asrConfig = config }
 
-        fun customHeaders(headers: Map<String, String>) = apply { this.customHeaders = headers }
+//        fun customHeaders(headers: Map<String, String>) = apply { this.customHeaders = headers }
 
         fun build() = SpeechConfig(
 //            apiKey = apiKey,

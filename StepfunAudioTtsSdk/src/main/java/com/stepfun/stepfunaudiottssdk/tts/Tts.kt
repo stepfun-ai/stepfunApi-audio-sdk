@@ -275,6 +275,7 @@ object Tts {
      * 停止流式播放
      */
     fun stopStream() {
+        ttsStreamClient?.close()
         audioStreamPlayer?.stop()
     }
 

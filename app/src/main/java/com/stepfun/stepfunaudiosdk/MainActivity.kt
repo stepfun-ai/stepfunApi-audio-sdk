@@ -119,13 +119,7 @@ class MainActivity : AppCompatActivity() {
     private fun initSdk() {
         // 创建配置
         // 注意：httpBaseUrl 和 webSocketUrl 请根据实际文档填写
-        val config = SpeechConfig.Builder()
-            .environment(Environment.PRODUCTION)
-            .httpBaseUrl("https://k3s-tts.stepfun-inc.net/")
-            .webSocketUrl("wss://k3s-tts.stepfun-inc.net/openapi/v1/realtime/audio")
-            .customHeaders(mapOf("header_keys" to "header_values"))
-            .enableLogging(true)
-            .build()
+        val config = SpeechConfig.Builder().build()
 
         // 初始化核心 SDK
         SpeechSdk.init(this, config)
@@ -172,8 +166,11 @@ class MainActivity : AppCompatActivity() {
         btnStreamPlay.isEnabled = false
         btnStreamPlay.text = "流式连接中..."
 
-        val params = TtsStreamParams.Builder().model(TtsModel.STEP_TTS_MINI.modelId)
+        val params = TtsStreamParams.Builder()
+            .url("wss://k3s-tts.stepfun-inc.net/openapi/v1/realtime/audio")
+            .model(TtsModel.STEP_TTS_MINI.modelId)
             .voice(TtsVoice.STEP_TTS_MINI_CIXINGNANSHENG.voiceId).responseFormat(TtsAudioFormat.PCM)
+            .customHeader(mapOf("123" to "adb" , "222" to "333"))
             .mode("sentence").features(
             TtsCreateEvent.Features(
                 enableMarkdownFilter = true

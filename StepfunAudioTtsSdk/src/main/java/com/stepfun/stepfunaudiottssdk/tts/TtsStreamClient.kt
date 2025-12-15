@@ -71,18 +71,24 @@ class TtsStreamClient {
 
         this.callback = callback
         val config = SpeechCoreSdk.getConfig()
-        val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
-        val url = "$wsUrl?model=${params.model}"
+//        val wsUrl = SpeechCoreSdk.getConfig().webSocketUrl
+        val wsUrl = params.url
+        val url = "$wsUrl&model=${params.model}"
 //        val url = "$wsUrl?model=${params.model}"
         "Connecting to WebSocket URL: $url".logD(TAG)
 
         val requestBuilder = Request.Builder().url(url)
         config.customHeaders.forEach { (key, value) ->
-            requestBuilder.addHeader(key, value)
+            requestBuilder.header(key, value)
+        }
+
+
+        params.customHeaders.forEach { (key, value) ->
+            requestBuilder.header(key, value)
         }
 
         val request = requestBuilder.build()
-        "Request headers: ${request.headers}".logD(TAG)
+        "Request headers: ${request.headers.toString()}".logD(TAG)
         "Websocket params : $params".logI(TAG)
 
         webSocket = WebSocketClient.newWebSocket(request, object : WebSocketListener() {
@@ -100,9 +106,13 @@ class TtsStreamClient {
                 super.onFailure(webSocket, t, response)
 
                 val duration = System.currentTimeMillis() - connectTime
-                "WebSocket 连接异常断开 (耗时${duration}ms). Exception: ${t.javaClass.simpleName}, Msg: ${t.message}".logD(TAG)
+                "WebSocket 连接异常断开 (耗时${duration}ms). Exception: ${t.javaClass.simpleName}, Msg: ${t.message}".logD(
+                    TAG
+                )
                 if (response != null) {
-                    "WebSocket Response: code=${response.code}, message=${response.message}".logD(TAG)
+                    "WebSocket Response: code=${response.code}, message=${response.message}".logD(
+                        TAG
+                    )
                 }
 
                 // 判断是否是正常的空闲超时断开
@@ -121,7 +131,8 @@ class TtsStreamClient {
                         callback.onError(
                             TtsStreamError(
                                 code = TtsError.ERROR_WEBSOCKET,
-                                message = t.message ?: "WebSocket connection failed (${t.javaClass.simpleName})"
+                                message = t.message
+                                    ?: "WebSocket connection failed (${t.javaClass.simpleName})"
                             )
                         )
                     }
@@ -305,7 +316,11 @@ class TtsStreamClient {
      * 根据 API 文档：如果连续 60 秒无动作，系统会自动断开连接
      * 这种情况下应该视为正常完成，而不是错误
      */
-    private fun isIdleTimeoutDisconnection(t: Throwable, _response: Response?, _duration: Long): Boolean {
+    private fun isIdleTimeoutDisconnection(
+        t: Throwable,
+        _response: Response?,
+        _duration: Long
+    ): Boolean {
         // 1. 如果已经收到 audio.done 事件，说明正常完成了
         if (isAudioDoneReceived) {
             "判定为正常断开：已收到 audio.done 事件".logD(TAG)
